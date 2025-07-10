@@ -1,0 +1,33 @@
+.dot-wave {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.dot-wave span {
+  width: 12px;
+  height: 12px;
+  background-color: #3b82f6; /* blue-600 */
+  border-radius: 50%;
+  animation: wave 1.2s infinite ease-in-out;
+}
+
+.dot-wave span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dot-wave span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes wave {
+  0%, 80%, 100% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  40% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}

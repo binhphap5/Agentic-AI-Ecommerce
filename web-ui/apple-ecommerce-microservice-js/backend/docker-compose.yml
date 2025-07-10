@@ -1,0 +1,119 @@
+
+services:
+  user-service:
+    build: ./user-service
+    # ports:
+    #   - 5000:5000
+    environment:
+      - MONGO_URL=${MONGO_URI_USERS}
+      - JWT_SECRET=${JWT_SECRET}
+    networks:
+      - ecommerce-network
+    depends_on:
+      - mongo
+    deploy:
+      replicas: 1
+
+  product-service:
+    build: ./product-service
+    # ports:
+    #   - 5001:5001
+    environment:
+      - MONGO_URI=${MONGO_URI_PRODUCTS}
+    networks:
+      - ecommerce-network
+    depends_on:
+      - mongo
+    deploy:
+      replicas: 1
+
+  shopping-cart-service:
+    build: ./shopping-cart-service
+    # ports:
+    #   - 5002:5002
+    environment:
+      - MONGO_URI=${MONGO_URI_CART}
+      - PRODUCT_SERVICE_URI=http://product-service:5001
+    networks:
+      - ecommerce-network
+    depends_on:
+      - mongo
+      - product-service
+    deploy:
+      replicas: 1
+    
+  
+  order-service:
+    build: ./order-service
+    # ports:
+    #   - 5003:5003
+    environment:
+      - MONGO_URI=${MONGO_URI_ORDER}
+      - PRODUCT_SERVICE_URI=http://product-service:5001
+    depends_on:
+      - mongo
+      - product-service
+    networks:
+      - ecommerce-network
+    deploy:
+      replicas: 1
+
+  payment-service:
+    build: ./payment-service
+    # ports:
+    #   - 5004:5004
+    environment:
+      - MONGO_URI=${MONGO_URI_PAYMENT}  
+      - MOMO_SECRET_KEY=${MOMO_SECRET_KEY}
+    depends_on:
+      - mongo
+    networks:
+      - ecommerce-network
+    deploy:
+      replicas: 1
+
+  notification-service:
+    build: ./notification-service
+    # ports:
+    #   - 5005:5005
+    environment:
+      - NODEMAILER_EMAIL=${NODEMAILER_EMAIL}
+      - NODEMAILER_PASSWORD=${NODEMAILER_PASSWORD}
+    networks:
+      - ecommerce-network
+    deploy:
+      replicas: 1
+
+
+
+  mongo:
+    image: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - ecommerce-network
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    networks:
+      - ecommerce-network
+    depends_on:
+      - user-service
+      - product-service
+      - shopping-cart-service
+      - order-service
+      - payment-service
+      - notification-service
+
+volumes:
+  mongo-data:
+
+networks:
+  ecommerce-network:
+    driver: bridge

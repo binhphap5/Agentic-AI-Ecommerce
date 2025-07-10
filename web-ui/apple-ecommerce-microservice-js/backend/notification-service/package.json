@@ -1,0 +1,23 @@
+{
+  "name": "notification-service",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "echo 'No tests available'"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "jest": "^30.0.3",
+    "nodemailer": "^7.0.3",
+    "nodemon": "^3.1.10",
+    "twilio": "^5.7.1"
+  }
+}
