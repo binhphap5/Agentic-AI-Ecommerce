@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from langchain_core.documents import Document
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import SupabaseVectorStore
 from supabase.client import create_client
 import os
@@ -23,7 +23,6 @@ def normalize_storage(value):
             return 0
     else:
         try:
-            # Trường hợp đã là số đơn thuần (giả sử là GB)
             return int(value)
         except:
             return 0
@@ -48,7 +47,7 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
 def generate_product_content(row: pd.Series) -> str:
     """Tạo nội dung semantic-rich cho embedding từ các trường sản phẩm"""
     features = [
-        f"**Sản phẩm**: {row['name']}",
+        f"**Tên**: {row['name']}",
         f"**Mô tả**: {row['description']}",
         f"**Đánh giá**: {row['evaluate']}",
     ]
@@ -70,7 +69,7 @@ def load_to_supabase(excel_path: str):
             "name": row["name"],
             "type": row["type"],
             "ram": int(row["ram"]) if row["ram"] and row["ram"].isdigit() else 0,
-            "storage": int(row["storage"]) if row["storage"] and row["storage"].isdigit() else 0,
+            "storage": row["storage"],
             "price": float(row["price"]),
             "stock": row["stock"],
             "color": row["color"],
@@ -78,7 +77,7 @@ def load_to_supabase(excel_path: str):
             "description": row["description"],
             "evaluate": row["evaluate"],
         }
-        
+                
         docs.append(Document(page_content=content, metadata=metadata))
 
     # Kết nối Supabase

@@ -10,34 +10,46 @@ client = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SERVICE_KE
 
 def query_supabase(sql_query):
     """
-    Execute a SQL query on Supabase using a remote procedure call, limit results and format for LLM readability.
+    Thực thi một truy vấn SQL trên Supabase và tự động wrap kết quả vào JSONB.
 
-    Args:
-        sql_query (str): The SQL query to be executed.
+    Tham số:
+        sql_query (str): Câu lệnh SQL cần thực thi.
 
-    Returns:
-        str: Formatted string of the query result for LLM consumption.
+    Trả về:
+        str: Chuỗi kết quả đã được định dạng để LLM dễ xử lý.
     """
-    # Thêm LIMIT 10 nếu chưa có trong query
+    X = 3
+    sql_query = sql_query.strip().rstrip(';')
     if 'limit' not in sql_query.lower():
-        if ';' in sql_query:
-            sql_query = sql_query.replace(';', '')
-        sql_query += ' LIMIT 3'
-    response = client.postgrest.rpc('execute_sql', {"sql": sql_query}).execute()
-    if getattr(response, "error", None) is None:
+        sql_query += f' LIMIT {X}'
+
+    wrapped_query = f"SELECT to_jsonb(t) FROM ({sql_query}) AS t;"
+
+    try:
+        response = client.postgrest.rpc('execute_sql', {"sql": wrapped_query}).execute()
+
         data = response.data
-        if not data:
-            return "Không tìm thấy kết quả phù hợp."
-        # Format kết quả đẹp cho LLM
-        output = f"TÌM THẤY {len(data)} KẾT QUẢ:\n"
-        for idx, row in enumerate(data):
-            output += f"\nKẾT QUẢ {idx+1}:\n"
-            for key, value in row.items():
-                output += f"- {key}: {value}\n"
-        return output
-    else:
-        return f"Lỗi truy vấn: {str(response.error)}"
-import os
+        if getattr(response, "error", None) is None:
+            if not data:
+                return "Không tìm thấy kết quả phù hợp."
+
+            output = f"TÌM THẤY {len(data)} KẾT QUẢ:\n"
+            for idx, row in enumerate(data):
+                # Xử lý cả hai trường hợp:
+                item = row 
+
+                if not item:
+                    output += f"\nKẾT QUẢ {idx+1}: (Không có dữ liệu)\n"
+                    continue
+
+                output += f"\nKẾT QUẢ {idx+1}:\n"
+                for key, value in item.items():
+                    output += f"- {key}: {value}\n"
+            return output
+        else:
+            return f"Lỗi truy vấn: {response.error.get('message', 'Không rõ lỗi')}"
+    except Exception as e:
+        return f"Lỗi hệ thống: {str(e)}"
 
 def get_vector_retriever(embedding_model):
     """
@@ -57,19 +69,19 @@ def get_vector_retriever(embedding_model):
         table_name="products",
         query_name="match_documents"
     )
-    return vs.as_retriever(search_kwargs={"k":3})
+    return vs.as_retriever(search_kwargs={"k": 3})
 
 def get_product_semantic(query, embedding_model):
     """
-    Retrieve semantic information of products based on a query.
+    Truy xuất thông tin ngữ nghĩa của sản phẩm dựa trên truy vấn.
 
-    Args:
-        query (str): The search query to find relevant products.
-        embedding_model: An instance of HuggingFaceEmbeddings.
+    Tham số:
+        query (str): Câu truy vấn để tìm các sản phẩm liên quan.
+        embedding_model: Một instance của HuggingFaceEmbeddings.
 
-    Returns:
-        str: A formatted string summarizing the total number of products found 
-        and their metadata details.
+    Trả về:
+        str: Chuỗi đã được định dạng tóm tắt tổng số sản phẩm tìm thấy 
+        và chi tiết metadata của chúng.
     """
 
     retriever = get_vector_retriever(embedding_model)
