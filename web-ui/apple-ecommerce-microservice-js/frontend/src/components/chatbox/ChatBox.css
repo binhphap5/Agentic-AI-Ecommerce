@@ -71,10 +71,31 @@
   border: 1px solid rgb(240, 215, 215);
 }
 
-.close-btn {
-  margin-left: auto;
+.header-title {
+  flex-grow: 1; /* Title takes up available space */
+}
+
+.header-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* Space between buttons */
+}
+
+.header-btn {
+  background: none;
+  border: none;
+  color: white;
   cursor: pointer;
-  font-size: 20px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.header-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 .chatbox-body {
@@ -225,5 +246,55 @@
 
 .chat-product-info {
   margin-top: 4px;
+}
+
+/* Confirmation Modal */
+.confirm-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+
+.confirm-modal {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  width: 300px;
+}
+
+.confirm-modal p {
+  margin-bottom: 20px;
+  font-size: 16px;
+}
+
+.confirm-modal-buttons {
+  display: flex;
+  justify-content: space-around;
+}
+
+.confirm-modal-buttons button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.confirm-modal-buttons .cancel-btn {
+  background-color: #f0f0f0;
+}
+
+.confirm-modal-buttons .confirm-btn {
+  background-color: #e74c3c;
+  color: white;
 }
   

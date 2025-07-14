@@ -1,6 +1,6 @@
 from langchain_huggingface import HuggingFaceEmbeddings
 import torch
-from retriever.retrieval import query_supabase, get_product_semantic
+from retriever.retrieval import query_supabase_with_llm, get_product_semantic
 from langchain_mcp_adapters.client import MultiServerMCPClient
 import asyncio
 
@@ -39,23 +39,23 @@ def get_product_semantic_tool(query: str) -> str:
     Trả về chuỗi thông tin ngữ nghĩa của các sản phẩm dựa trên một truy vấn.
 
     Tham số:
-        query (str): Câu truy vấn đã được chuẩn hóa cho truy vấn.
+        query (str): Câu hỏi tiếng Việt từ người dùng đã được chuẩn hóa cho truy vấn.
 
     Trả về:
-        str: Chuỗi kết quả đã được định dạng và chi tiết metadata của chúng.
+        str: Kết quả trả về là thông tin các sản phẩm dựa trên câu hỏi.
     """
 
     return get_product_semantic(query, embedding_model=embedding_model)
 
 def query_supabase_tool(query: str) -> str:
     """
-    Thực thi một truy vấn SQL trên Supabase.
+    Nhận một câu tiếng Việt từ người dùng và trả về kết quả truy vấn từ Supabase.
 
     Tham số:
-        sql_query (str): Câu lệnh SQL cần thực thi.
+        query (str): Câu hỏi tiếng Việt từ người dùng đã được chuẩn hóa cho truy vấn.
 
     Trả về:
-        str: Chuỗi kết quả đã được định dạng.
+        str: Kết quả trả về là thông tin các sản phẩm dựa trên câu hỏi.
     """
     
-    return query_supabase(query)
+    return query_supabase_with_llm(query, embedding_model=embedding_model)

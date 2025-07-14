@@ -14,7 +14,7 @@ import re
 
 # LangGraph and LangChain imports
 from langchain_core.messages import HumanMessage, AIMessage
-from agent_core import agent_graph, metadata_agent
+from agent_core import agent_graph
 
 # Load environment variables
 load_dotenv()
@@ -59,18 +59,28 @@ class ChatRequest(BaseModel):
 # If you still need security, a different mechanism should be implemented.
 
 # Database operations
-async def fetch_conversation_history(session_id: str, limit: int = 20) -> List[Dict[str, Any]]:
+async def fetch_conversation_history(session_id: str, limit: int = 100) -> List[Dict[str, Any]]:
     """Fetch conversation history from Supabase."""
     try:
         response = supabase.table("chat_histories") \
             .select("*") \
             .eq("session_id", session_id) \
+            .order("created_at", desc=False) \
             .limit(limit) \
             .execute()
         return response.data
     except Exception as e:
         print(f"Error fetching conversation history: {e}")
         return []
+
+async def delete_conversation_history(session_id: str):
+    """Delete all conversation history for a given session_id."""
+    try:
+        supabase.table("chat_histories").delete().eq("session_id", session_id).execute()
+        return {"status": "success", "message": "History deleted"}
+    except Exception as e:
+        print(f"Error deleting conversation history: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete history")
 
 async def store_message(session_id: str, message_type: str, content: str, data: Optional[Dict] = None):
     """Store a message in Supabase, removing <think>...</think> blocks from content."""
@@ -85,6 +95,30 @@ async def store_message(session_id: str, message_type: str, content: str, data: 
         }).execute()
     except Exception as e:
         print(f"Error storing message: {e}")
+
+# API to fetch history
+@app.get("/history/{session_id}")
+async def get_history(session_id: str):
+    """Endpoint to fetch conversation history."""
+    history = await fetch_conversation_history(session_id)
+    if not history:
+        return []
+    # Format messages for the frontend
+    formatted_messages = []
+    for record in history:
+        msg_data = record.get("message", {})
+        formatted_messages.append({
+            "from": msg_data.get("type"),
+            "text": msg_data.get("content"),
+            "timestamp": record.get("created_at")
+        })
+    return formatted_messages
+
+# API to delete history
+@app.delete("/history/{session_id}")
+async def delete_history(session_id: str):
+    """Endpoint to delete conversation history."""
+    return await delete_conversation_history(session_id)
 
 # Streaming endpoint
 @app.post("/invoke-python-agent")

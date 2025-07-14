@@ -1,7 +1,7 @@
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
-from prompts import system_prompt
-from tools import get_product_semantic_tool, query_supabase
+from utils.prompts import system_prompt
+from tools import get_product_semantic_tool, query_supabase_tool
 from dotenv import load_dotenv
 import os
 
@@ -18,12 +18,6 @@ llm = get_langchain_model()
 # Use create_react_agent for a clean agent setup
 agent_graph = create_react_agent(
     model=llm,
-    tools=[get_product_semantic_tool, query_supabase],
+    tools=[get_product_semantic_tool, query_supabase_tool],
     prompt=system_prompt,
-)
-
-metadata_agent = create_react_agent(
-    model=llm,
-    tools=[],
-    prompt="You are a helpful assistant."
 )

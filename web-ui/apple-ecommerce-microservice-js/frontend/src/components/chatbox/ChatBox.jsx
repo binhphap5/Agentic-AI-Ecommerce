@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { IoClose } from 'react-icons/io5';
+import { IoClose, IoTrashOutline } from 'react-icons/io5';
 import { PiRobotDuotone } from 'react-icons/pi';
 import { FiSend } from 'react-icons/fi';
 import ReactMarkdown from 'react-markdown';
@@ -14,7 +14,37 @@ const defaultOptions = [
   'Tư vấn MacBook chuyên đồ họa',
 ];
 
-const sessionId = crypto.randomUUID()
+// Function to get or create a session ID
+const getSessionId = () => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  if (user && user._id) {
+    console.log("User ID found:", user._id);
+    return user._id;
+  }
+  let anonymousId = localStorage.getItem('anonymous_session_id');
+  console.log("Anonymous session ID found:", anonymousId);
+  if (!anonymousId) {
+    anonymousId = crypto.randomUUID();
+    localStorage.setItem('anonymous_session_id', anonymousId);
+  }
+  return anonymousId;
+};
+
+const sessionId = getSessionId();
+
+// Custom Confirmation Modal Component
+const ConfirmationModal = ({ message, onConfirm, onCancel }) => (
+  <div className="confirm-modal-overlay">
+    <div className="confirm-modal">
+      <p>{message}</p>
+      <div className="confirm-modal-buttons">
+        <button onClick={onCancel} className="cancel-btn">Hủy</button>
+        <button onClick={onConfirm} className="confirm-btn">Xác nhận</button>
+      </div>
+    </div>
+  </div>
+);
+
 // Component to render markdown content
 const MarkdownMessage = ({ text }) => (
 <ReactMarkdown
@@ -64,7 +94,41 @@ const ChatBox = () => {
   const [input, setInput] = useState('');
   const [showOptions, setShowOptions] = useState(true);
   const [isBotTyping, setIsBotTyping] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const bottomRef = useRef(null);
+
+  const createMessage = (from, text) => ({
+    from,
+    text,
+    timestamp: new Date().toISOString(),
+  });
+
+  // Fetch history on component mount
+  useEffect(() => {
+    const fetchHistory = async () => {
+      if (!sessionId) return;
+      try {
+        const response = await fetch(`http://localhost:8055/history/${sessionId}`);
+        const history = await response.json();
+        if (history && history.length > 0) {
+          setMessages(history.map(msg => ({ ...msg, from: msg.from === 'human' ? 'user' : 'bot' })));
+          setShowOptions(false);
+        } else {
+          const welcome = createMessage('bot', 'Bạn cần hỗ trợ gì?');
+          setMessages([welcome]);
+          setShowOptions(true);
+        }
+      } catch (error) {
+        console.error('Failed to fetch history:', error);
+        const welcome = createMessage('bot', 'Chào bạn, tôi có thể giúp gì cho bạn?');
+        setMessages([welcome]);
+      }
+    };
+
+    if (isOpen) {
+      fetchHistory();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (bottomRef.current) {
@@ -73,12 +137,6 @@ const ChatBox = () => {
   }, [messages, isBotTyping]);
 
   const toggleChat = () => setIsOpen((prev) => !prev);
-
-  const createMessage = (from, text) => ({
-    from,
-    text,
-    timestamp: new Date().toISOString(),
-  });
 
   const handleSend = async (text) => {
     if (!text.trim()) return;
@@ -157,25 +215,62 @@ const ChatBox = () => {
     }
   };
 
+  const handleDeleteHistory = () => {
+    setShowConfirmModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!sessionId) return;
+    setShowConfirmModal(false);
+    try {
+      const response = await fetch(`http://localhost:8055/history/${sessionId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete history on the server.');
+      }
+
+      const welcome = createMessage('bot', 'Lịch sử trò chuyện đã được xóa. Bạn cần hỗ trợ gì?');
+      setMessages([welcome]);
+      setShowOptions(true);
+
+    } catch (error) {
+      console.error('Failed to delete history:', error);
+      const errorMsg = createMessage('bot', 'Đã có lỗi xảy ra khi xóa lịch sử. Vui lòng thử lại.');
+      setMessages((prev) => [...prev, errorMsg]);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowConfirmModal(false);
+  };
+
   const formatTime = (ts) =>
     new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-  useEffect(() => {
-    if (isOpen && messages.length === 0) {
-      const welcome = createMessage('bot', 'Bạn cần hỗ trợ gì?');
-      setMessages([welcome]);
-      setShowOptions(true);
-    }
-  }, [isOpen, messages.length]);
-
   return (
     <div className="chatbox-container">
+      {showConfirmModal && (
+        <ConfirmationModal
+          message="Bạn có chắc chắn muốn xóa toàn bộ lịch sử trò chuyện không?"
+          onConfirm={confirmDelete}
+          onCancel={cancelDelete}
+        />
+      )}
       {isOpen && (
         <div className="chatbox">
           <div className="chatbox-header">
             <img src="/lkn.png" alt="Logo" className="chatbox-logo" />
-            <span>AI Agent Assistant</span>
-            <IoClose onClick={toggleChat} className="close-btn" />
+            <span className="header-title">AI Agent Assistant</span>
+            <div className="header-buttons">
+              <button onClick={handleDeleteHistory} className="header-btn" title="Xóa lịch sử">
+                <IoTrashOutline size={20} />
+              </button>
+              <button onClick={toggleChat} className="header-btn" title="Đóng">
+                <IoClose size={22} />
+              </button>
+            </div>
           </div>
 
           <div className="chatbox-body">
@@ -250,3 +345,4 @@ const ChatBox = () => {
 };
 
 export default ChatBox;
+

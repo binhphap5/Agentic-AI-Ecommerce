@@ -48,6 +48,11 @@ def generate_product_content(row: pd.Series) -> str:
     """Tạo nội dung semantic-rich cho embedding từ các trường sản phẩm"""
     features = [
         f"**Tên**: {row['name']}",
+        f"**Loại**: {row['type']}",
+        f"**Ram**: {row['ram']} GB",
+        f"**Dung lượng**: {row['storage']} GB",
+        f"**Màu sắc**: {row['color']}",
+        f"**Giá**: {row['price']} VNĐ",
         f"**Mô tả**: {row['description']}",
         f"**Đánh giá**: {row['evaluate']}",
     ]
