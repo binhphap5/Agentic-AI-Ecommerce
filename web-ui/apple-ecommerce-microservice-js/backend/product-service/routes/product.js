@@ -78,17 +78,6 @@ router.get("/get", async (req, res) => {
   }
 });
 
-// GET product by product_id
-router.get("/by-product-id/:productId", async (req, res) => {
-  try {
-    const product = await Product.findOne({ product_id: req.params.productId });
-    if (!product) return res.status(404).json({ msg: "Product not found" });
-    res.json(product);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
 // GET product by Mongo _id
 router.get("/:id", async (req, res) => {
   try {
@@ -99,6 +88,37 @@ router.get("/:id", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+// GET products by a list of product_ids
+router.post("/get-by-ids", async (req, res) => {
+  const { product_ids } = req.body;
+
+  if (!Array.isArray(product_ids) || product_ids.length === 0) {
+    return res.status(400).json({ msg: "Array of product_ids is required" });
+  }
+
+  try {
+    const products = await Product.find({
+      product_id: { $in: product_ids }
+    });
+    res.json(products);
+  } catch (e) {
+    res.status(500).json({ msg: "Server error", error: e.message });
+  }
+});
+
+
+// GET product by custom product_id
+router.get("/by-product-id/:productId", async (req, res) => {
+  try {
+    const product = await Product.findOne({ product_id: req.params.productId });
+    if (!product) return res.status(404).json({ msg: "Product not found" });
+    res.json(product);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 
 // UPDATE product
 router.put("/update/:id", async (req, res) => {

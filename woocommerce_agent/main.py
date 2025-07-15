@@ -54,6 +54,7 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     chatInput: str
     sessionId: str
+    userID: Optional[str] = None
 
 # Bearer token verification is removed as per the new logic for direct integration.
 # If you still need security, a different mechanism should be implemented.
@@ -124,7 +125,6 @@ async def delete_history(session_id: str):
 @app.post("/invoke-python-agent")
 async def invoke_agent_streaming(request: ChatRequest):
     """Endpoint to handle chat requests and stream responses."""
-
     async def stream_generator() -> AsyncGenerator[str, None]:
         # Full conversation history to be stored at the end
         full_response = ""
@@ -152,9 +152,11 @@ async def invoke_agent_streaming(request: ChatRequest):
                 content=request.chatInput
             )
 
+            userID = request.userID if request.userID else None
             # Use astream_events for streaming
             async for event in agent_graph.astream_events(
-                {"messages": messages},
+                {"messages": messages,
+                 "userID": userID},
                 version="v1" 
             ):
                 kind = event["event"]

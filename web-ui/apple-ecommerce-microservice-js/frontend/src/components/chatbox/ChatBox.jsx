@@ -10,7 +10,7 @@ import './ChatBox.css';
 const defaultOptions = [
   'Bạn là ai ?',
   'Tìm sản phẩm dưới 10 triệu',
-  'Thông tin iPhone 16e',
+  'Giá của iPad Air (M3) 11 inch Wi-Fi',
   'Tư vấn MacBook chuyên đồ họa',
 ];
 
@@ -162,7 +162,9 @@ const ChatBox = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ chatInput: text, sessionId: sessionId }),
+        body: JSON.stringify({ chatInput: text, sessionId: sessionId,
+           userID: JSON.parse(localStorage.getItem("user"))?._id || null }),
+           
       });
 
       if (!response.body) {

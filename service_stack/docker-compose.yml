@@ -6,7 +6,7 @@ volumes:
   ollama_storage:
   # vllm_storage:
   # qdrant_storage:
-  open-webui:
+  # open-webui:
   # flowise:
   # caddy-data:
   # caddy-config:
@@ -113,16 +113,16 @@ services:
   #       - ~/.flowise:/root/.flowise
   #   entrypoint: /bin/sh -c "sleep 3; flowise start"
 
-  open-webui:
-    image: ghcr.io/open-webui/open-webui:main
-    restart: unless-stopped
-    container_name: open-webui
-    expose:
-      - 8080/tcp
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    volumes:
-      - open-webui:/app/backend/data
+  # open-webui:
+  #   image: ghcr.io/open-webui/open-webui:main
+  #   restart: unless-stopped
+  #   container_name: open-webui
+  #   expose:
+  #     - 8080/tcp
+  #   extra_hosts:
+  #     - "host.docker.internal:host-gateway"
+  #   volumes:
+  #     - open-webui:/app/backend/data
 
   # n8n-import:
   #   <<: *service-n8n
@@ -158,20 +158,20 @@ services:
   #   volumes:
   #     - qdrant_storage:/qdrant/storage
 
-  neo4j:
-    image: neo4j:latest
-    volumes:
-        - ./neo4j/logs:/logs
-        - ./neo4j/config:/config
-        - ./neo4j/data:/data
-        - ./neo4j/plugins:/plugins
-    expose:
-      - 7473/tcp
-      - 7474/tcp
-      - 7687/tcp
-    environment:
-        - NEO4J_AUTH=${NEO4J_AUTH:-"neo4j/your_password"}
-    restart: always      
+  # neo4j:
+  #   image: neo4j:latest
+  #   volumes:
+  #       - ./neo4j/logs:/logs
+  #       - ./neo4j/config:/config
+  #       - ./neo4j/data:/data
+  #       - ./neo4j/plugins:/plugins
+  #   expose:
+  #     - 7473/tcp
+  #     - 7474/tcp
+  #     - 7687/tcp
+  #   environment:
+  #       - NEO4J_AUTH=${NEO4J_AUTH:-"neo4j/your_password"}
+  #   restart: always      
 
   # caddy:
   #   container_name: caddy

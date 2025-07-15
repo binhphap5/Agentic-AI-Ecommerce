@@ -5,13 +5,15 @@ const router = express.Router();
 // Tạo đơn hàng tạm thời
 router.post("/:userId", async (req, res) => {
     const { userId } = req.params;
-    const { items, totalAmount } = req.body;
+    const { items, totalAmount, paymentMethod, address } = req.body;
 
     try {
         const order = new Order({
             userId,
             items,
             totalAmount,
+            paymentMethod,
+            address,
             isTemporary: true,
             paymentStatus: "Unpaid",
             expiresAt: new Date(Date.now() + 5 * 60 * 1000),
