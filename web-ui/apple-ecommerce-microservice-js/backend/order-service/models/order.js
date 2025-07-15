@@ -23,9 +23,16 @@ const orderSchema = new mongoose.Schema({
         type: String, 
         default: "Chưa thanh toán" 
     },
+    paymentMethod: {
+        type: String, 
+        default: "COD"
+    },
     isTemporary: {  // dùng để check xem nó là order tạm hay order final
         type: Boolean, 
         default: true 
+    },
+    address: {
+        type: String,
     },
     expiresAt: { 
         type: Date,

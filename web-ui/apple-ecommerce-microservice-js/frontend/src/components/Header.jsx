@@ -58,9 +58,22 @@ function Header({ navigationItems, hidden }) {
 
     useEffect(() => {
     const updateCartCounter = () => {
-        const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-        console.log(cart)
-        setCartCounter(Object.keys(cart).length);
+        try {
+            const cartData = localStorage.getItem("cart");
+            if (!cartData || cartData === "undefined") {
+                localStorage.setItem("cart", JSON.stringify([]));
+                setCartCounter(0);
+                return;
+            }
+            
+            const cart = JSON.parse(cartData);
+            const count = Array.isArray(cart) ? cart.length : Object.keys(cart || {}).length;
+            setCartCounter(count);
+        } catch (error) {
+            console.error("[Header] Error parsing cart:", error);
+            localStorage.setItem("cart", JSON.stringify([]));
+            setCartCounter(0);
+        }
     };
     
     // Update on load

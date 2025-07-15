@@ -7,18 +7,24 @@ import History from "./History";
 
 const ProfilePage = () => {
     const storedUser = localStorage.getItem('user');
-    const user = JSON.parse(storedUser);
+    const user = storedUser ? JSON.parse(storedUser) : null;
 
-    const initialUserInfo = {
+    const initialUserInfo = user ? {
         fullName: user.name,
         email: user.email,
         phone: user.phone,
-        location: user.address,
-        province: user.province,
-        district: user.district,
-        ward: user.ward,
-        password:user.password,
-        imageUrl:user.imageUrl,
+        address: user.address,
+        password: user.password,
+        imageUrl: user.imageUrl,
+        newPassword: '',
+        confirmPassword: '',
+    } : {
+        fullName: '',
+        email: '',
+        phone: '',
+        address: '',
+        password: '',
+        imageUrl: '',
         newPassword: '',
         confirmPassword: '',
     };
@@ -35,15 +41,14 @@ const ProfilePage = () => {
             fullName: user.name,
             email: user.email,
             phone: user.phone,
-            location: user.address,
-            province: user.province,
-            district: user.district,
-            ward: user.ward,
+            address: user.address,
             password:user.password,
             imageUrl:user.imageUrl,
             newPassword: '',
             confirmPassword: '',
         });
+
+        console.log(user)
 
         const handleResize = () => setScreenSize(window.innerWidth);
         window.addEventListener('resize', handleResize);
@@ -98,39 +103,38 @@ const ProfilePage = () => {
     
             // Cập nhật thông tin người dùng
             const updatedUser = {
-                ...JSON.parse(localStorage.getItem("user")),
-                user: {
-                    ...JSON.parse(localStorage.getItem("user")).user,
-                    imageUrl: uploadedImageUrl,
-                    fullName: userInfo.fullName,
-                    email: userInfo.email,
-                    phone: userInfo.phone,
-                    location: userInfo.location,
-                    province: userInfo.province,
-                    district: userInfo.district,
-                    ward: userInfo.ward,
-                    password: userInfo.newPassword || userInfo.password,
-                },
+                ...user, 
+                imageUrl: uploadedImageUrl,
+                name: userInfo.fullName,
+                email: userInfo.email,
+                phone: userInfo.phone,
+                address: userInfo.address,
+                password: userInfo.newPassword || user.password,
             };
+
     
             localStorage.setItem("user", JSON.stringify(updatedUser));
     
-            setUserInfo({ ...userInfo, imageUrl: uploadedImageUrl });
+            setUserInfo({
+                ...userInfo,
+                imageUrl: uploadedImageUrl,
+                password: userInfo.newPassword || user.password,
+                newPassword: '',
+                confirmPassword: ''
+            }); 
+
     
             const userData = {
                 email: userInfo.email,
                 fullName: userInfo.fullName,
                 phone: userInfo.phone,
-                location: userInfo.location,
-                province: userInfo.province,
-                district: userInfo.district,
-                ward: userInfo.ward,
-                password: userInfo.newPassword || userInfo.password,
+                address: userInfo.address,
+                password: userInfo.newPassword ,
                 image: uploadedImageUrl,
             };
     
             const saveUserDataResponse = await fetch(
-                `${import.meta.env.VITE_BACKEND_URL}/api/auth/upload-image`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/users/upload-image`,
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -225,7 +229,7 @@ const ProfilePage = () => {
                             >
                                 Quản lý đơn hàng
                             </li>
-                            <li
+                            {/* <li
                                 className={`text-lg mb-4 cursor-pointer ${activeMenu === 'history' ? 'text-orange-500 font-semibold border-r-4 border-orange-500' : 'text-gray-600'}`}
                                 onClick={() => handleMenuClick('history')}
                             >
@@ -236,7 +240,7 @@ const ProfilePage = () => {
                                 onClick={() => handleMenuClick('notifications')}
                             >
                                 Thông báo
-                            </li>
+                            </li> */}
                         </ul>
                     </div>
                 ) : (
@@ -250,8 +254,8 @@ const ProfilePage = () => {
                         >
                             <option value="userInfo">Thông tin người dùng</option>
                             <option value="order">Quản lý đơn hàng</option>
-                            <option value="history">Lịch sử đặt hàng</option>
-                            <option value="notifications">Thông báo</option>
+                            {/* <option value="history">Lịch sử đặt hàng</option>
+                            <option value="notifications">Thông báo</option> */}
                         </select>
                     </div>
                 )}
@@ -290,7 +294,7 @@ const ProfilePage = () => {
 
                             <div>
                                 <h2 className="text-2xl font-semibold">{userInfo.fullName}</h2>
-                                <p className="text-gray-600">{userInfo.location}</p>
+                                {/* <p className="text-gray-600">{userInfo.address}</p> */}
                             </div>
                         </div>
 
@@ -306,6 +310,8 @@ const ProfilePage = () => {
                                     onChange={handleChange}
                                     className="mt-2 p-3 w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
                                     placeholder="Nhập họ và tên"
+                                    disabled // Disable input field
+                                    style={{ opacity: 0.5 }} // Apply opacity to indicate it's disabled
                                 />
                             </div>
                             <div>
@@ -318,6 +324,8 @@ const ProfilePage = () => {
                                     onChange={handleChange}
                                     className="mt-2 p-3 w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
                                     placeholder="Nhập số điện thoại"
+                                    disabled // Disable input field
+                                    style={{ opacity: 0.5 }} // Apply opacity to indicate it's disabled
                                 />
                             </div>
                             <div>
@@ -330,73 +338,37 @@ const ProfilePage = () => {
                                     onChange={handleChange}
                                     className="mt-2 p-3 w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
                                     placeholder="Nhập địa chỉ Email"
+                                    disabled // Disable input field
+                                    style={{ opacity: 0.5 }} // Apply opacity to indicate it's disabled
                                 />
                             </div>
                         </div>
 
                         <div className="mb-4">
-                            <label htmlFor="location" className="block text-sm font-medium text-gray-700">Địa chỉ</label>
+                            <label htmlFor="address" className="block text-sm font-medium text-gray-700">Địa chỉ</label>
                             <input
                                 type="text"
-                                id="location"
-                                name="location"
-                                value={userInfo.location}
+                                id="address"
+                                name="address"
+                                value={userInfo.address}
                                 onChange={handleChange}
                                 className="mt-2 p-3 w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
                                 placeholder="Nhập địa chỉ"
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-                            <div>
-                                <label htmlFor="province" className="block text-sm font-medium text-gray-700">Tỉnh/thành</label>
-                                <input
-                                    type="text"
-                                    id="province"
-                                    name="province"
-                                    value={userInfo.province}
-                                    onChange={handleChange}
-                                    className="mt-2 p-3 w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
-                                    placeholder="Nhập tỉnh/thành"
-                                />
-                            </div>
-                            <div>
-                                <label htmlFor="district" className="block text-sm font-medium text-gray-700">Quận/huyện</label>
-                                <input
-                                    type="text"
-                                    id="district"
-                                    name="district"
-                                    value={userInfo.district}
-                                    onChange={handleChange}
-                                    className="mt-2 p-3 w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
-                                    placeholder="Nhập quận/huyện"
-                                />
-                            </div>
-                            <div>
-                                <label htmlFor="ward" className="block text-sm font-medium text-gray-700">Phường/xã</label>
-                                <input
-                                    type="text"
-                                    id="ward"
-                                    name="ward"
-                                    value={userInfo.ward}
-                                    onChange={handleChange}
-                                    className="mt-2 p-3 w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
-                                    placeholder="Nhập phường/xã"
-                                />
-                            </div>
-                        </div>
 
                         <h3 className="text-xl font-semibold text-gray-700 mb-4">Tài khoản đăng nhập</h3>
 
                         <div className="mb-4">
-                            <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                                Tên đăng nhập
+                            <label htmlFor="email-login" className="block text-sm font-medium text-gray-700">
+                                Tải khoản đăng nhập
                             </label>
                             <input
-                                type="text"
-                                id="username"
-                                name="username"
-                                value={userInfo.username}
+                                type="email"
+                                id="email-login"
+                                name="email"
+                                value={userInfo.email}
                                 className="mt-2 p-3 w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
                                 onChange={handleChange}
                                 disabled // Disable input field
@@ -465,7 +437,7 @@ const ProfilePage = () => {
                 )}
 
                 {activeMenu === 'order' && <OrderManagement />}
-                {activeMenu === 'history' && <History />}   
+                {/* {activeMenu === 'history' && <History />}    */}
 
             </div>
              

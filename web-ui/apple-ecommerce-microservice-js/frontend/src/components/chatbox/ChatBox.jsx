@@ -10,7 +10,7 @@ import './ChatBox.css';
 const defaultOptions = [
   'Bạn là ai ?',
   'Tìm sản phẩm dưới 10 triệu',
-  'Tư vấn mẫu điện thoại quốc dân',
+  'Thông tin iPhone 16e',
   'Tư vấn MacBook chuyên đồ họa',
 ];
 
@@ -95,8 +95,7 @@ const ChatBox = () => {
   const [showOptions, setShowOptions] = useState(true);
   const [isBotTyping, setIsBotTyping] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const bottomRef = useRef(null);
-
+  const chatBodyRef = useRef(null);
   const createMessage = (from, text) => ({
     from,
     text,
@@ -131,8 +130,16 @@ const ChatBox = () => {
   }, [isOpen]);
 
   useEffect(() => {
-    if (bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+    const chatBody = chatBodyRef.current;
+    if (chatBody) {
+      const timer = setTimeout(() => {
+        chatBody.scrollTo({
+          top: chatBody.scrollHeight,
+          behavior: 'smooth'
+        });
+      }, 50); 
+
+      return () => clearTimeout(timer);
     }
   }, [messages, isBotTyping]);
 
@@ -273,7 +280,7 @@ const ChatBox = () => {
             </div>
           </div>
 
-          <div className="chatbox-body">
+          <div className="chatbox-body" ref={chatBodyRef}>
             {messages.map((msg, idx) => (
               <div key={idx} className={`chat-msg-wrapper ${msg.from}`}>
                 {msg.from === 'bot' && (
@@ -302,7 +309,6 @@ const ChatBox = () => {
                     </div>
                 </div>
             )}
-            <div ref={bottomRef} />
           </div>
 
           {showOptions && (

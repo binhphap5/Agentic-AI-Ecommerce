@@ -199,4 +199,55 @@ router.post("/reset-password", async (req, res) => {
     }
 })
 
+
+router.post("/upload-image", async (req, res) => {
+    const { 
+        email, 
+        fullName, 
+        phone, 
+        address, 
+        password, 
+        image 
+    } = req.body;
+
+    try {
+        const user = await User.findOne({ email });
+        if (!user) {
+        return res.status(404).json({ message: "User not found." });
+        }
+
+        if (image) user.imageUrl = image;
+        if (fullName) user.name = fullName;
+        if (phone) user.phone = phone;
+        if (address) user.address = address;
+
+        // Hash mật khẩu mới nếu có thay đổi
+        if (password) {
+        const saltRounds = 10; // Độ mạnh của salt
+        user.password = await bcrypt.hash(password, saltRounds);
+        }
+
+        await user.save();
+
+        res.status(200).json({
+        success: true,
+        message: "User information updated successfully!",
+        user: {
+            email: user.email,
+            fullName: user.name,
+            phone: user.phone,
+            location: user.address,
+            imageUrl: user.imageUrl,
+        },
+        });
+    } catch (error) {
+        console.error("Error updating user information:", error);
+        res.status(500).json({
+        success: false,
+        message: "Error updating user information.",
+        error: error.message,
+        });
+    }
+})
+
 module.exports = router

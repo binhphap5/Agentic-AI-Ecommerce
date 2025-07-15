@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { FaCheckCircle, FaShippingFast, FaCreditCard } from "react-icons/fa";
+import {
+  FaCheckCircle,
+  FaRegTimesCircle,
+  FaHourglassHalf,
+  FaUndoAlt,
+  FaShippingFast,
+  FaCreditCard,
+} from "react-icons/fa";
 
 const OrderManagement = () => {
   const storedUser = localStorage.getItem("user");
@@ -41,7 +48,8 @@ const OrderManagement = () => {
             name: product.name,
             price: product.price,
             image: product.image,
-            selectedSize: item.selectedSize || "-", // fallback nếu không có
+            storage: product.storage,
+            color: product.color,
           };
         })
       );
@@ -53,6 +61,50 @@ const OrderManagement = () => {
     }
   };
 
+  const getPaymentMethodLabel = (method) => {
+    switch (method) {
+      case "COD":
+        return "Tiền mặt";
+      case "Momo":
+        return "Ví MoMo";
+      case "Bank":
+        return "Chuyển khoản ngân hàng";
+      default:
+        return method;
+    }
+  };
+
+  const renderPaymentStatusWithIcon = (status) => {
+    switch (status) {
+      case "Paid":
+        return (
+          <span className="flex items-center gap-2 text-green-600">
+            <FaCheckCircle /> Đã thanh toán
+          </span>
+        );
+      case "Unpaid":
+        return (
+          <span className="flex items-center gap-2 text-red-500">
+            <FaRegTimesCircle /> Chưa thanh toán
+          </span>
+        );
+      case "Pending":
+        return (
+          <span className="flex items-center gap-2 text-yellow-500">
+            <FaHourglassHalf /> Đang xử lý
+          </span>
+        );
+      case "Refunded":
+        return (
+          <span className="flex items-center gap-2 text-blue-500">
+            <FaUndoAlt /> Đã hoàn tiền
+          </span>
+        );
+      default:
+        return <span className="text-gray-600">{status}</span>;
+    }
+  };
+
 
   const renderOrderDetails = () => {
     if (!selectedOrder) return null;
@@ -60,6 +112,7 @@ const OrderManagement = () => {
     const {
       createdAt,
       paymentMethod,
+      paymentStatus,
       shippingMethod,
       totalAmount,
       status,
@@ -68,7 +121,7 @@ const OrderManagement = () => {
     } = selectedOrder;
 
     return (
-      <div className="bg-white p-6 rounded-lg shadow-lg">
+      <div className="flex-grow lg:ml-8 bg-white p-6 rounded-lg shadow-lg">
         <h2 className="text-2xl font-bold text-blue-700 mb-4">Chi tiết đơn hàng</h2>
         <div className="grid md:grid-cols-2 gap-4 mb-6">
           <div className="space-y-2">
@@ -76,12 +129,13 @@ const OrderManagement = () => {
             <p><strong>Ngày đặt:</strong> {new Date(createdAt).toLocaleString()}</p>
             <p className="flex items-center gap-2">
               <FaCreditCard className="text-green-600" />
-              <strong>Phương thức thanh toán:</strong> {paymentMethod || "COD"}
+              <strong>Phương thức thanh toán:</strong> {getPaymentMethodLabel(paymentMethod)}
             </p>
             <p className="flex items-center gap-2">
               <FaShippingFast className="text-blue-500" />
-              <strong>Vận chuyển:</strong> {shippingMethod || "Giao hàng nhanh"}
+              <strong>Trạng thái thanh toán:</strong> {renderPaymentStatusWithIcon(paymentStatus)}
             </p>
+
           </div>
           <div className="space-y-2">
             <p><strong>Tổng tiền:</strong> {totalAmount.toLocaleString()} VND</p>
@@ -101,7 +155,9 @@ const OrderManagement = () => {
               <div className="flex-1">
                 <h4 className="font-semibold text-lg">{item.name}</h4>
                 <p className="text-sm text-gray-500">Số lượng: {item.quantity}</p>
-                <p className="text-sm text-gray-500">Kích thước: {item.selectedSize || "-"}</p>
+                <p className="text-sm text-gray-500">Dung lượng: {item.storage }</p>
+                <p className="text-sm text-gray-500">Màu: {item.color }</p>
+
               </div>
               <div className="font-bold text-blue-700">
                 {(item.price * item.quantity).toLocaleString()} VND
@@ -114,48 +170,64 @@ const OrderManagement = () => {
   };
 
   const renderOrderList = () => {
-    const filteredOrders = orders.filter((order) => order.status !== "finish");
+  const filteredOrders = orders.filter((order) => order.status !== "finish");
 
-    return (
-      <div className="bg-white p-6 rounded-lg shadow-lg">
-        <h2 className="text-2xl font-bold text-blue-700 mb-6">Đơn hàng của bạn</h2>
-        {filteredOrders.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Ngày đặt</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Thanh toán</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Tổng tiền</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Trạng thái</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredOrders.map((order, index) => (
-                  <tr
-                    key={index}
-                    onClick={() => handleOrderClick(order)}
-                    className="cursor-pointer hover:bg-blue-50"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {new Date(order.createdAt).toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">{order.paymentMethod || "COD"}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{order.totalAmount.toLocaleString()} VND</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-yellow-600 font-semibold">
-                      {order.status}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-gray-500">Không có đơn hàng nào đang chờ xử lý.</p>
-        )}
-      </div>
-    );
-  };
+  return (
+    <div className="bg-white rounded-lg shadow-lg">
+      <h2 className="text-2xl font-bold text-orange-400 mb-6">Đơn hàng của bạn</h2>
+      {filteredOrders.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {filteredOrders.map((order, index) => (
+            <div
+              key={index}
+              onClick={() => handleOrderClick(order)}
+              className="border rounded-lg p-4 shadow hover:shadow-md transition cursor-pointer bg-gray-50 hover:bg-white"
+            >
+              <div className="flex justify-between items-center mb-2">
+                <div className="text-sm text-gray-500">
+                  Ngày đặt: <span className="font-medium">{new Date(order.createdAt).toLocaleString()}</span>
+                </div>
+                <span className="text-xs px-2 py-1 rounded-full font-semibold bg-yellow-100 text-yellow-700">
+                  {order.status}
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-2 mt-2">
+                <div className="flex items-center gap-2">
+                  <FaCreditCard className="text-green-600" />
+                  <span className="text-sm font-medium"> {getPaymentMethodLabel(order.paymentMethod)}</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {renderPaymentStatusWithIcon(order.paymentStatus)}
+                </div>
+
+
+                <div className="flex items-center gap-2">
+                  <FaCheckCircle className="text-blue-600" />
+                  <span className="text-sm font-medium">Tổng tiền: {order.totalAmount.toLocaleString()} VND</span>
+                </div>
+
+                {order.items?.length > 0 && (
+                  <div className="text-sm text-gray-600">
+                    Sản phẩm:{" "}
+                    <span className="font-medium">{order.items[0]?.name || "Xem chi tiết..."}</span>
+                    {order.items.length > 1 && (
+                      <span className="text-xs ml-1 text-gray-500">+{order.items.length - 1} sản phẩm khác</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-gray-500">Không có đơn hàng nào đang chờ xử lý.</p>
+      )}
+    </div>
+  );
+};
+
 
   const handleBackToOrders = () => {
     setStep(1);

@@ -21,4 +21,3 @@ npm run dev
 
 After running, you can access the React app at:
 
-🔗 http://localhost:5173 

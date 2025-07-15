@@ -49,14 +49,16 @@ router.get("/:userId/:orderId", async (req, res) => {
 // Cập nhật trạng thái đơn
 router.put("/:orderId/status", async (req, res) => {
     const { orderId } = req.params;
-    const { status, paymentStatus, isTemporary } = req.body;
+    const { address, status, paymentStatus, isTemporary, paymentMethod} = req.body;
 
     try {
         const order = await Order.findById(orderId);
         if (!order) return res.status(404).json({ msg: "Order not found" });
 
         if (status) order.status = status;
+        if(address) order.address = address;
         if (paymentStatus) order.paymentStatus = paymentStatus;
+        if(paymentMethod) order.paymentMethod = paymentMethod;
         if (typeof isTemporary !== "undefined") order.isTemporary = isTemporary;
 
         if (isTemporary === false && order.expiresAt) {

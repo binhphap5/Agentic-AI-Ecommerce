@@ -78,6 +78,17 @@ router.get("/get", async (req, res) => {
   }
 });
 
+// GET product by product_id
+router.get("/by-product-id/:productId", async (req, res) => {
+  try {
+    const product = await Product.findOne({ product_id: req.params.productId });
+    if (!product) return res.status(404).json({ msg: "Product not found" });
+    res.json(product);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // GET product by Mongo _id
 router.get("/:id", async (req, res) => {
   try {
@@ -300,6 +311,20 @@ router.delete("/bulk-delete", async (req, res) => {
     });
   } catch (e) {
     res.status(500).json({ msg: "Server Error", error: e.message });
+  }
+});
+
+//DELETE all
+router.delete('/delete-all', async (req, res) => {
+  try {
+    const result = await Product.deleteMany({});
+    res.status(200).json({
+      message: 'All products have been deleted',
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error('Error deleting all products:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

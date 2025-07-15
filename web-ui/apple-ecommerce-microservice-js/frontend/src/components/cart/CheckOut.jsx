@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { FaMoneyBillWave, FaUniversity } from "react-icons/fa";
-import { Context } from '../../App';
+import { Context } from "../../App";
 
 function CheckOut() {
   const [_, setCartCounter] = useContext(Context);
@@ -11,36 +11,38 @@ function CheckOut() {
   const { user: userData, cart: cartData, orderId, expiresAt } = location.state || {};
 
   const [cartItems, setCartItems] = useState([]);
+  const [remainingTime, setRemainingTime] = useState(300);
   const [formData, setFormData] = useState({
-    name: "", address: "", phone: "", email: "", paymentMethod: "COD",
+    name: "", email: "", phone: "", address: "", paymentMethod: "COD",
   });
-  const [remainingTime, setRemainingTime] = useState(300); // 5 phút
 
   useEffect(() => {
     if (!expiresAt) return;
-
     const interval = setInterval(() => {
-      const diff = Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000);
+      const diff = Math.floor((new Date(expiresAt) - Date.now()) / 1000);
       setRemainingTime(diff);
-
       if (diff <= 0) {
         clearInterval(interval);
         toast.warning("Đơn hàng đã hết hạn. Quay về giỏ hàng...");
         setTimeout(() => navigate("/cart"), 3000);
       }
     }, 1000);
-
     return () => clearInterval(interval);
   }, [expiresAt, navigate]);
 
   useEffect(() => {
     if (userData) {
       setFormData({
-        name: userData.name || "", email: userData.email || "",
-        phone: userData.phone || "", address: userData.address || "", paymentMethod: "COD",
+        name: userData.name || "",
+        email: userData.email || "",
+        phone: userData.phone || "",
+        address: userData.address || "",
+        paymentMethod: "COD",
       });
     }
-    if (cartData) setCartItems(Object.values(cartData));
+    if (cartData) {
+      setCartItems(Object.values(cartData));
+    }
   }, [userData, cartData]);
 
   const handleFormChange = (e) => {
@@ -53,10 +55,30 @@ function CheckOut() {
   const formatPrice = (price) =>
     new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(price);
 
+  const clearOrderedItemsFromCart = async () => {
+    const storedCart = JSON.parse(localStorage.getItem("cart")) || {};
+    const orderedProductIds = cartItems.map(item => item.product?._id || item.productId);
+    const updatedCart = Object.fromEntries(
+      Object.entries(storedCart).filter(([key, item]) => {
+        const pid = item.product?._id || item.productId || key;
+        return !orderedProductIds.includes(pid);
+      })
+    );
+    localStorage.setItem("cart", JSON.stringify(updatedCart));
+    setCartCounter(Object.values(updatedCart).length);
+
+    await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/cart/${userData._id}/bulk-remove`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productIds: orderedProductIds }),
+    });
+  };
+
   const handleSubmitOrder = async (e) => {
     e.preventDefault();
     if (remainingTime <= 0) return toast.error("Đơn hàng đã hết hạn!");
-
+    if (!formData.address.trim()) return toast.warning("Vui lòng nhập địa chỉ giao hàng!");
+    
     try {
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/orders/${orderId}/status`, {
         method: "PUT",
@@ -64,7 +86,9 @@ function CheckOut() {
         body: JSON.stringify({
           isTemporary: false,
           paymentStatus: formData.paymentMethod === "COD" ? "Unpaid" : "Paid",
+          paymentMethod: formData.paymentMethod,
           status: "Confirmed",
+          address: formData.address,
         }),
       });
 
@@ -72,46 +96,30 @@ function CheckOut() {
       const updatedOrder = await res.json();
 
       if (formData.paymentMethod === "Momo") {
-        const momoRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/momo/${updatedOrder._id}`, {
+        // 🧠 Lưu tạm thông tin để xử lý khi redirect quay lại
+        sessionStorage.setItem("orderId", updatedOrder._id);
+        sessionStorage.setItem("userId", userData._id);
+        sessionStorage.setItem("cartItems", JSON.stringify(cartItems));
+
+        const momoRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/payments/${updatedOrder._id}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: calculateTotal() }),
+          body: JSON.stringify({ 
+            amount: calculateTotal(),
+            userId: userData._id, 
+          }),
         });
+
 
         const momoData = await momoRes.json();
         if (!momoData.success) throw new Error("Không lấy được MoMo payUrl");
-
-        window.location.href = momoData.payUrl;
-      } else {
-        toast.success("Đặt hàng thành công!");
-
-        // Xóa các sản phẩm đã đặt khỏi localStorage
-        const storedCart = JSON.parse(localStorage.getItem("cart")) || {};
-        const orderedProductIds = cartItems.map(item => item.product?._id || item.productId);
-        const updatedCart = Object.fromEntries(
-          Object.entries(storedCart).filter(([key, item]) => {
-            const pid = item.product?._id || item.productId || key;
-            return !orderedProductIds.includes(pid);
-          })
-        );
-        localStorage.setItem("cart", JSON.stringify(updatedCart));
-
-        // ✅ Cập nhật lại số lượng giỏ hàng trong context
-        setCartCounter(Object.values(updatedCart).length);
-
-        // Xóa khỏi DB
-        await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/cart/${userData._id}/bulk-remove`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ productIds: orderedProductIds }),
-        });
-
-        // Quay lại trang chủ
-        setTimeout(() => {
-          navigate("/");
-        }, 2000);
+        
+        return window.location.href = momoData.payUrl;
       }
 
+      await clearOrderedItemsFromCart();
+      toast.success("Đặt hàng thành công!");
+      setTimeout(() => navigate("/"), 2000);
     } catch (error) {
       console.error("Order error:", error);
       toast.error("Lỗi khi xác nhận đơn hàng!");
@@ -121,17 +129,15 @@ function CheckOut() {
   const paymentOptions = [
     { id: "COD", label: "Thanh toán khi nhận hàng", icon: <FaMoneyBillWave className="text-green-500" size={20} /> },
     {
-      id: "Momo",
-      label: "Ví điện tử Momo",
-      icon: <img src="https://cdn.haitrieu.com/wp-content/uploads/2022/10/Logo-MoMo-Square.png"
-                 alt="Momo" className="w-6 h-6 object-contain" />,
+      id: "Momo", label: "Ví điện tử Momo",
+      icon: <img src="https://cdn.haitrieu.com/wp-content/uploads/2022/10/Logo-MoMo-Square.png" alt="Momo" className="w-6 h-6 object-contain" />,
     },
     { id: "Bank", label: "Chuyển khoản ngân hàng", icon: <FaUniversity className="text-blue-600" size={20} /> },
   ];
 
   const formatCountdown = (seconds) => {
-    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-    const s = (seconds % 60).toString().padStart(2, '0');
+    const m = String(Math.floor(seconds / 60)).padStart(2, "0");
+    const s = String(seconds % 60).padStart(2, "0");
     return `${m}:${s}`;
   };
 
@@ -173,7 +179,9 @@ function CheckOut() {
               <label
                 key={option.id}
                 className={`flex items-center gap-3 p-3 border rounded cursor-pointer transition ${
-                  formData.paymentMethod === option.id ? "border-blue-500 bg-blue-50 ring-1 ring-blue-300" : "hover:border-blue-400"
+                  formData.paymentMethod === option.id
+                    ? "border-blue-500 bg-blue-50 ring-1 ring-blue-300"
+                    : "hover:border-blue-400"
                 }`}
               >
                 <input

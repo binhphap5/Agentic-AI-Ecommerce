@@ -24,6 +24,7 @@ import ProtectedRoute from "./components/admin/ProtectedRoute.jsx"
 import Order from "./components/admin/Order.jsx";
 import Account from "./components/admin/Account.jsx";
 import LoadingSpinner from "./components/common/LoadingSpinner";
+import PaymentSuccess from './components/cart/PaymentSuccess.jsx';
 
 import ChatBox from './components/chatbox/ChatBox';
 
@@ -55,91 +56,93 @@ function App() {
 
    
 
-  return (
-      <Context.Provider value={[cartCounter, setCartCounter]}>
-          <div className="main-content">
-              {/* Announcement Bar */}
-              {/* <AnnouncementBar title="Free Shipping in Europe" /> */}
+    return (
+        <Context.Provider value={[cartCounter, setCartCounter]}>
+            <div className="main-content">
+                {/* Announcement Bar */}
+                {/* <AnnouncementBar title="Free Shipping in Europe" /> */}
 
-              {/* Header */}
-              {!shouldHideHeaderFooter && <Header navigationItems={navigationItems} />}
+                {/* Header */}
+                {!shouldHideHeaderFooter && <Header navigationItems={navigationItems} />}
 
-              {/* Routes Container */}
-              <div className="routes-container">
-                  <Routes>
-                      <Route path="/recovery" element={<Recovery />} />
-                      <Route path="/profile" element={<Profile />} />
-                      <Route path="/register" element={<Register />} />
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/cart" element={<Cart />} />
-                      <Route path="/checkout" element={<CheckOut />} />
-                      <Route
-                          path="/"
-                          element={
-                              <>
-                                  <CategoryDescription
-                                      title=""
-                                      desc=""
-                                      carouselImages={[
-                                        "https://shopdunk.com/images/uploaded/banner/Banner%202025/thang_7/banner%20iPdsr_PC%20(1).png",
-                                        "https://shopdunk.com/images/uploaded/banner/Banner%202025/thang_7/banner%20MBsr_PC%20(1).png",
-                                        "https://shopdunk.com/images/uploaded/banner/Banner%202025/thang_7/kv-T7_PC.png",
-                                        "https://shopdunk.com/images/uploaded/banner/Banner%202025/thang_7/banner%20iP16sr_PC%20(1).png",
-                                      ]}
-                                  />
-                                  <ProductGrid category="IPhone" />
-                              </>
-                          }
-                      />
-                      <Route
-                          path="/IPad"
-                          element={
-                              <>
-                                  <CategoryDescription
-                                      title=""
-                                      desc=""
-                                      carouselImages={[
-                                        "https://shopdunk.com/images/uploaded/banner/Banner%202025/thang_7/banner%20iPdsr_PC%20(1).png",
-                                        "https://shopdunk.com/images/uploaded/banner/Banner%202025/thang_7/banner%20MBsr_PC%20(1).png",
-                                        "https://shopdunk.com/images/uploaded/banner/Banner%202025/thang_7/kv-T7_PC.png",
-                                        "https://shopdunk.com/images/uploaded/banner/Banner%202025/thang_7/banner%20iP16sr_PC%20(1).png",
-                                      ]}
-                                  />
-                                  <ProductGrid category="IPad" />
-                              </>
-                          }
-                      />
-                      <Route path="/products/:id" element={<ProductPage />} />
+                {/* Routes Container */}
+                <div className="routes-container">
+                    <Routes>
+                        <Route path="/recovery" element={<Recovery />} />
+                        <Route path="/profile" element={<Profile />} />
+                        <Route path="/register" element={<Register />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/cart" element={<Cart />} />
+                        <Route path="/checkout" element={<CheckOut />} />
+                        <Route path="/payment-success" element={<PaymentSuccess />} />
 
-                      {/*  admin routes */ }
-                      <Route path="/admin" element={<AdminLogin />} />
-                      <Route path="/admin/login" element={<AdminLogin />} />
-                      <Route path="/admin/home" element={<ProtectedRoute element={<Admin />} />} />
-                      <Route path="/admin/product" element={<ProtectedRoute element={<Product />} />} />
-                      <Route path="/admin/order" element={<ProtectedRoute element={<Order />} />} />
-                      <Route path="/admin/account" element={<ProtectedRoute element={<Account />} />} />
-                  </Routes>
-              </div>
+                        <Route
+                            path="/"
+                            element={
+                                <>
+                                    <CategoryDescription
+                                        title=""
+                                        desc=""
+                                        carouselImages={[
+                                            "https://shopdunk.com/images/uploaded/banner/Banner%202025/thang_7/banner%20iPdsr_PC%20(1).png",
+                                            "https://shopdunk.com/images/uploaded/banner/Banner%202025/thang_7/banner%20MBsr_PC%20(1).png",
+                                            "https://shopdunk.com/images/uploaded/banner/Banner%202025/thang_7/kv-T7_PC.png",
+                                            "https://shopdunk.com/images/uploaded/banner/Banner%202025/thang_7/banner%20iP16sr_PC%20(1).png",
+                                        ]}
+                                    />
+                                    <ProductGrid category="iPhone" />
+                                </>
+                            }
+                        />
+                        <Route
+                            path="/IPad"
+                            element={
+                                <>
+                                    <CategoryDescription
+                                        title=""
+                                        desc=""
+                                        carouselImages={[
+                                            "https://shopdunk.com/images/uploaded/banner/Banner%202025/thang_7/banner%20iPdsr_PC%20(1).png",
+                                            "https://shopdunk.com/images/uploaded/banner/Banner%202025/thang_7/banner%20MBsr_PC%20(1).png",
+                                            "https://shopdunk.com/images/uploaded/banner/Banner%202025/thang_7/kv-T7_PC.png",
+                                            "https://shopdunk.com/images/uploaded/banner/Banner%202025/thang_7/banner%20iP16sr_PC%20(1).png",
+                                        ]}
+                                    />
+                                    <ProductGrid category="iPad" />
+                                </>
+                            }
+                        />
+                        <Route path="/products/:id" element={<ProductPage />} />
 
-              {/* Footer - chỉ hiển thị khi không phải admin route */}
-              {!shouldHideHeaderFooter && <Footer />}
-              {!shouldHideHeaderFooter && <ChatBox />}
-          </div>
+                        {/*  admin routes */ }
+                        <Route path="/admin" element={<AdminLogin />} />
+                        <Route path="/admin/login" element={<AdminLogin />} />
+                        <Route path="/admin/home" element={<ProtectedRoute element={<Admin />} />} />
+                        <Route path="/admin/product" element={<ProtectedRoute element={<Product />} />} />
+                        <Route path="/admin/order" element={<ProtectedRoute element={<Order />} />} />
+                        <Route path="/admin/account" element={<ProtectedRoute element={<Account />} />} />
+                    </Routes>
+                </div>
 
-          <ToastContainer
-            position="top-right"
-            autoClose={3000}
-            hideProgressBar={false}
-            newestOnTop={false}
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-            theme="light"
-            />
-      </Context.Provider>
-  );
+                {/* Footer - chỉ hiển thị khi không phải admin route */}
+                {!shouldHideHeaderFooter && <Footer />}
+                {!shouldHideHeaderFooter && <ChatBox />}
+            </div>
+
+            <ToastContainer
+                position="top-right"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="light"
+                />
+        </Context.Provider>
+    );
 }
 
 export default App;
