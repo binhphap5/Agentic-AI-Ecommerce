@@ -47,50 +47,50 @@ const ConfirmationModal = ({ message, onConfirm, onCancel }) => (
 
 // Component to render markdown content
 const MarkdownMessage = ({ text }) => (
-<ReactMarkdown
- children={text}
- remarkPlugins={[remarkGfm]}
- rehypePlugins={[rehypeRaw]}
- components={{
-   img: ({ node, ...props }) => (
-     <img
-       {...props}
-       style={{
-         maxWidth: '100%',
-         borderRadius: 8,
-         margin: '8px 0'
-       }}
-     />
-   ),
-   a: ({ node, ...props }) => (
-     <a {...props} style={{ color: '#007bff' }}>
-       {props.children}
-     </a>
-   ),
-   table: ({ node, ...props }) => (
-     <div style={{ overflowX: 'auto', margin: '8px 0' }}>
-       <table
-         {...props}
-         style={{ width: '100%', maxWidth: '100%', borderCollapse: 'collapse' }}
-       />
-     </div>
-   ),
-   th: ({ node, ...props }) => (
-     <th {...props} style={{ padding: '8px', backgroundColor: '#F3F4F6', textAlign: 'left' }} />
-   ),
-   td: ({ node, ...props }) => (
-     <td {...props} style={{ padding: '8px' }} />
-   ),
-   code: ({ inline, children, className, ...props }) =>
-     inline ? (
-       <code className={className} {...props}>{children}</code>
-     ) : (
-       <pre className="bg-gray-800 text-white p-2 rounded">
-         <code {...props}>{children}</code>
-       </pre>
-     )
- }}
-/>
+  <ReactMarkdown
+    children={text}
+    remarkPlugins={[remarkGfm]}
+    rehypePlugins={[rehypeRaw]}
+    components={{
+      img: ({ node, ...props }) => (
+        <img
+          {...props}
+          style={{
+            maxWidth: '100%',
+            borderRadius: 8,
+            margin: '8px 0'
+          }}
+        />
+      ),
+      a: ({ node, ...props }) => (
+        <a {...props} style={{ color: '#007bff' }}>
+          {props.children}
+        </a>
+      ),
+      table: ({ node, ...props }) => (
+        <div style={{ overflowX: 'auto', margin: '8px 0' }}>
+          <table
+            {...props}
+            style={{ width: '100%', maxWidth: '100%', borderCollapse: 'collapse' }}
+          />
+        </div>
+      ),
+      th: ({ node, ...props }) => (
+        <th {...props} style={{ padding: '8px', backgroundColor: '#F3F4F6', textAlign: 'left' }} />
+      ),
+      td: ({ node, ...props }) => (
+        <td {...props} style={{ padding: '8px' }} />
+      ),
+      code: ({ inline, children, className, ...props }) =>
+        inline ? (
+          <code className={className} {...props}>{children}</code>
+        ) : (
+          <pre className="bg-gray-800 text-white p-2 rounded">
+            <code {...props}>{children}</code>
+          </pre>
+        )
+    }}
+  />
 );
 
 const ChatBox = () => {
@@ -142,7 +142,7 @@ const ChatBox = () => {
           top: chatBody.scrollHeight,
           behavior: 'smooth'
         });
-      }, 50); 
+      }, 50);
 
       return () => clearTimeout(timer);
     }
@@ -167,14 +167,16 @@ const ChatBox = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ chatInput: text, sessionId: sessionId,
-           userID: JSON.parse(localStorage.getItem("user"))?._id || null }),
-           
+        body: JSON.stringify({
+          chatInput: text, sessionId: sessionId,
+          userID: JSON.parse(localStorage.getItem("user"))?._id || null
+        }),
+
       });
 
       if (!response.body) {
-          setIsBotTyping(false);
-          return;
+        setIsBotTyping(false);
+        return;
       };
 
       const reader = response.body.getReader();
@@ -184,14 +186,14 @@ const ChatBox = () => {
       while (true) {
         const { value, done } = await reader.read();
         if (done) {
-            setIsBotTyping(false);
-            break;
+          setIsBotTyping(false);
+          break;
         }
 
         if (!firstChunkReceived) {
-            setIsBotTyping(false);
-            setMessages((prev) => [...prev, createMessage('bot', '')]);
-            firstChunkReceived = true;
+          setIsBotTyping(false);
+          setMessages((prev) => [...prev, createMessage('bot', '')]);
+          firstChunkReceived = true;
         }
 
         const chunk = decoder.decode(value);
@@ -223,8 +225,8 @@ const ChatBox = () => {
       setIsBotTyping(false);
       console.error('Failed to fetch from agent:', error);
       setMessages((prev) => {
-          const filtered = prev.filter(msg => msg.from !== 'bot-loading');
-          return [...filtered, createMessage('bot', 'Sorry, I am having trouble connecting.')];
+        const filtered = prev.filter(msg => msg.from !== 'bot-loading');
+        return [...filtered, createMessage('bot', 'Sorry, I am having trouble connecting.')];
       });
     }
   };
@@ -295,26 +297,26 @@ const ChatBox = () => {
                 )}
 
                 <div className={`chat-msg ${msg.from}`}>
-                    <>
-                      <div className="msg-text">
-                        <MarkdownMessage text={msg.text} />
-                      </div>
-                      <div className="timestamp">{formatTime(msg.timestamp)}</div>
-                    </>
+                  <>
+                    <div className="msg-text">
+                      <MarkdownMessage text={msg.text} />
+                    </div>
+                    <div className="timestamp">{formatTime(msg.timestamp)}</div>
+                  </>
                 </div>
               </div>
             ))}
             {isBotTyping && (
-                <div className="chat-msg-wrapper bot">
-                    <img src="/lkn.png" alt="Bot" className="chatbox-logo" />
-                    <div className="chat-msg bot">
-                        <div className="loading-dots">
-                            <span />
-                            <span />
-                            <span />
-                        </div>
-                    </div>
+              <div className="chat-msg-wrapper bot">
+                <img src="/lkn.png" alt="Bot" className="chatbox-logo" />
+                <div className="chat-msg bot">
+                  <div className="loading-dots">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
                 </div>
+              </div>
             )}
           </div>
 
@@ -334,17 +336,31 @@ const ChatBox = () => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
+                if (e.key === 'Enter' && !e.shiftKey && !isBotTyping) {
                   e.preventDefault();
                   handleSend(input);
                 }
               }}
               rows={2}
+              disabled={isBotTyping}  
+              style={{
+                cursor: isBotTyping ? 'not-allowed' : 'text',
+                backgroundColor: isBotTyping ? '#f3f4f6' : undefined,
+              }}
             />
-            <button onClick={() => handleSend(input)} title="Gửi">
+            <button
+              onClick={() => handleSend(input)}
+              title="Gửi"
+              disabled={isBotTyping}  
+              style={{
+                cursor: isBotTyping ? 'not-allowed' : 'pointer',
+                opacity: isBotTyping ? 0.5 : 1
+              }}
+            >
               <FiSend size={25} style={{ transform: 'rotate(45deg)' }} />
             </button>
           </div>
+
         </div>
       )}
 

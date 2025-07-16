@@ -76,13 +76,14 @@ def order_tool(
 ) -> str:
     """
     Tạo và xác nhận một đơn hàng dựa trên danh sách ID sản phẩm.
-    Công cụ sẽ lấy thông tin sản phẩm, tạo đơn hàng tạm, sau đó xác nhận đơn hàng đó.
 
     Tham số:
         product_ids (list[str]): Danh sách ID sản phẩm cần đặt hàng.
+        address (str): Địa chỉ giao hàng của người dùng.
+        paymentMethod (Literal["COD", "Momo"]): Phương thức thanh toán,
 
     Trả về:
-        str: Kết quả trả về là thông tin các sản phẩm và trạng thái đơn hàng đã xác nhận.
+        str: Kết quả trả về là thông tin các sản phẩm và trạng thái của đơn hàng.
     """
 
     if not userID:
@@ -169,18 +170,20 @@ def order_tool(
 
         # Format thông tin trả về
         product_info = [
-            f"- {p.get('name', 'N/A')} - {p.get('storage', 'N/A')} GB (Giá: {p.get('price', 'N/A')} VND) (Màu sắc: {p.get('color', 'N/A')})"
+            f"- {p.get('name', 'N/A')} - {p.get('storage', 'N/A')} GB (Giá: {p.get('price', 'N/A')} VNĐ) (Màu sắc: {p.get('color', 'N/A')})"
             for p in products
         ]
         response_message = (
             "Đơn hàng:\n"
             + "\n".join(product_info)
-            + f"\n\nTổng cộng: {total_amount} VND."
-            + f"\nMã đơn: {order_id}."
+            + f"\n\nTổng cộng: {total_amount} VNĐ."
+            + f"\nGiao tới: {address}."
+            + f"\nXem chi tiết đơn hàng tại 'Trang cá nhân'."
         )
 
         if is_Momo:
             response_message += f"\n\nBẮT BUỘC gửi link thanh toán sau cho user: {payment_link}"
+            response_message += f"\nĐơn hàng sẽ bị hủy sau 5 phút nếu không thanh toán."
         return response_message
 
     except requests.exceptions.RequestException as e:

@@ -1,5 +1,13 @@
 /* ChatBox.css */
 
+.chatbox-footer textarea:disabled {
+  color: #999;
+}
+
+.chatbox-footer button:disabled {
+  pointer-events: none;
+}
+
 .chatbox-container {
   position: fixed;
   bottom: 20px;
