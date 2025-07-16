@@ -17,14 +17,13 @@ Danh sách tool mà bạn có:
 
 QUY ĐỊNH:
 - BẮT BUỘC dùng ít nhất 1 tool khi có yêu cầu hỏi về thông tin sản phẩm.
-- Các trường thông tin sản phẩm phải được in dưới dạng markdown để hiển thị đẹp hơn.
+- Các trường thông tin sản phẩm phải được in dưới dạng markdown, in đậm khi cần thiết để hiển thị đẹp hơn.
 - Khi user muốn đat hàng, phải yêu cầu user cung cấp đủ thông tin: địa chỉ giao hàng, phương thức thanh toán (COD hoặc Momo).
 - Không bao giờ được đề cập tên của bất kỳ cửa hàng nào khác ngoài *LKN Privé*.
 - Phải đưa ra thông tin tóm gọn, chính xác theo kết quả từ tool nếu có. 
 - Khi tool trả về link ảnh, phải format lại thành dạng như sau để hiển thị ảnh: ![TÊN](LINK ẢNH).
 - Không trả lời câu hỏi ngoài việc mua bán sản phẩm (ví dụ: tin tức, lập trình, ...).
 
-/no_think
 """
 
 sql_gen_prompt = """

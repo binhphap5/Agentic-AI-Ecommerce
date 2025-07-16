@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from "react";
 import {
-  FaCheckCircle,
   FaRegTimesCircle,
   FaHourglassHalf,
   FaUndoAlt,
   FaShippingFast,
   FaCreditCard,
+  FaClipboardList, // New icon for "Chờ xác nhận"
+  FaCheckCircle, // New icon for "Xác nhận"
+  FaTruck, // New icon for "Đang giao hàng"
+  FaHome, // New icon for "Đã nhận"
 } from "react-icons/fa";
 
 const OrderManagement = () => {
@@ -26,7 +29,7 @@ const OrderManagement = () => {
         })
         .then((data) => {
           setOrders(data);
-          console.log(data)
+          console.log(data);
           setLoading(false);
         })
         .catch((err) => {
@@ -41,7 +44,9 @@ const OrderManagement = () => {
       // Gọi API lấy thông tin chi tiết từng sản phẩm từ productId
       const enrichedItems = await Promise.all(
         order.items.map(async (item) => {
-          const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/products/${item.productId}`);
+          const res = await fetch(
+            `${import.meta.env.VITE_BACKEND_URL}/api/products/${item.productId}`
+          );
           const product = await res.json();
           return {
             ...item,
@@ -105,6 +110,79 @@ const OrderManagement = () => {
     }
   };
 
+  // New function for delivery progress bar
+  const renderDeliveryProgressBar = (currentStatus) => {
+    const statuses = [
+      {
+        id: "pending_confirmation",
+        label: "Chờ xác nhận",
+        icon: FaClipboardList,
+        backendStatus: "Chờ xác nhận",
+      },
+      {
+        id: "confirmed",
+        label: "Đã xác nhận",
+        icon: FaCheckCircle,
+        backendStatus: "Đã xác nhận",
+      },
+      {
+        id: "out_for_delivery",
+        label: "Đang giao hàng",
+        icon: FaTruck,
+        backendStatus: "Đang giao hàng",
+      },
+      {
+        id: "delivered",
+        label: "Đã nhận",
+        icon: FaHome,
+        backendStatus: "Đã nhận",
+      },
+    ];
+
+    const currentStatusIndex = statuses.findIndex(
+      (s) => s.backendStatus === currentStatus
+    );
+
+    return (
+      <div className="flex justify-between items-center my-6 relative">
+        {/* Progress Line */}
+        <div className="absolute top-1/2 left-0 right-0 h-1 bg-gray-200 z-0">
+          <div
+            className="h-full bg-blue-500 transition-all duration-500 ease-in-out"
+            style={{
+              width: `${(currentStatusIndex / (statuses.length - 1)) * 100}%`,
+            }}
+          ></div>
+        </div>
+
+        {statuses.map((s, index) => {
+          const isActive = index <= currentStatusIndex;
+          const IconComponent = s.icon;
+          return (
+            <div
+              key={s.id}
+              className={`flex flex-col items-center z-10 ${
+                isActive ? "text-blue-600" : "text-gray-400"
+              }`}
+            >
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
+                  isActive
+                    ? "bg-blue-600 border-blue-600 text-white"
+                    : "bg-white border-gray-300"
+                }`}
+              >
+                <IconComponent size={20} />
+              </div>
+              <p className="mt-2 text-center text-xs font-medium whitespace-nowrap">
+                {s.label}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   const renderOrderDetails = () => {
     if (!selectedOrder) return null;
@@ -115,31 +193,51 @@ const OrderManagement = () => {
       paymentStatus,
       shippingMethod,
       totalAmount,
-      status,
+      status, // This is the delivery status
       items,
       _id,
+      address,
     } = selectedOrder;
 
     return (
       <div className="flex-grow lg:ml-8 bg-white p-6 rounded-lg shadow-lg">
-        <h2 className="text-2xl font-bold text-blue-700 mb-4">Chi tiết đơn hàng</h2>
+        <h2 className="text-2xl font-bold text-blue-700 mb-4">
+          Chi tiết đơn hàng
+        </h2>
+
+        {/* Delivery Progress Bar */}
+        {renderDeliveryProgressBar(status)}
+
         <div className="grid md:grid-cols-2 gap-4 mb-6">
           <div className="space-y-2">
-            <p><strong>Mã đơn:</strong> {_id}</p>
-            <p><strong>Ngày đặt:</strong> {new Date(createdAt).toLocaleString()}</p>
+            <p>
+              <strong>Mã đơn:</strong> {_id}
+            </p>
+            <p>
+              <strong>Ngày đặt:</strong> {new Date(createdAt).toLocaleString()}
+            </p>
             <p className="flex items-center gap-2">
               <FaCreditCard className="text-green-600" />
-              <strong>Phương thức thanh toán:</strong> {getPaymentMethodLabel(paymentMethod)}
+              <strong>Phương thức thanh toán:</strong>{" "}
+              {getPaymentMethodLabel(paymentMethod)}
             </p>
             <p className="flex items-center gap-2">
               <FaShippingFast className="text-blue-500" />
-              <strong>Trạng thái thanh toán:</strong> {renderPaymentStatusWithIcon(paymentStatus)}
+              <strong>Trạng thái thanh toán:</strong>{" "}
+              {renderPaymentStatusWithIcon(paymentStatus)}
             </p>
-
           </div>
           <div className="space-y-2">
-            <p><strong>Tổng tiền:</strong> {totalAmount.toLocaleString()} VND</p>
-            <p><strong>Trạng thái:</strong> <span className="text-yellow-600 font-semibold">{status}</span></p>
+            <p>
+              <strong>Tổng tiền:</strong> {totalAmount.toLocaleString()} VND
+            </p>
+            <p>
+              <strong>Trạng thái:</strong>{" "}
+              <span className="text-yellow-600 font-semibold">{status}</span>
+            </p>
+            <p>
+              <strong>Địa chỉ giao hàng:</strong> {address}
+            </p>
           </div>
         </div>
 
@@ -155,9 +253,8 @@ const OrderManagement = () => {
               <div className="flex-1">
                 <h4 className="font-semibold text-lg">{item.name}</h4>
                 <p className="text-sm text-gray-500">Số lượng: {item.quantity}</p>
-                <p className="text-sm text-gray-500">Dung lượng: {item.storage }</p>
-                <p className="text-sm text-gray-500">Màu: {item.color }</p>
-
+                <p className="text-sm text-gray-500">Dung lượng: {item.storage}</p>
+                <p className="text-sm text-gray-500">Màu: {item.color}</p>
               </div>
               <div className="font-bold text-blue-700">
                 {(item.price * item.quantity).toLocaleString()} VND
@@ -170,64 +267,78 @@ const OrderManagement = () => {
   };
 
   const renderOrderList = () => {
-  const filteredOrders = orders.filter((order) => order.status !== "finish");
+    // We will show all orders in the list, and the progress bar will indicate "finish" status
+    // const filteredOrders = orders.filter((order) => order.status !== "finish");
+    const filteredOrders = orders;
 
-  return (
-    <div className="bg-white rounded-lg shadow-lg">
-      <h2 className="text-2xl font-bold text-orange-400 mb-6">Đơn hàng của bạn</h2>
-      {filteredOrders.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredOrders.map((order, index) => (
-            <div
-              key={index}
-              onClick={() => handleOrderClick(order)}
-              className="border rounded-lg p-4 shadow hover:shadow-md transition cursor-pointer bg-gray-50 hover:bg-white"
-            >
-              <div className="flex justify-between items-center mb-2">
-                <div className="text-sm text-gray-500">
-                  Ngày đặt: <span className="font-medium">{new Date(order.createdAt).toLocaleString()}</span>
-                </div>
-                <span className="text-xs px-2 py-1 rounded-full font-semibold bg-yellow-100 text-yellow-700">
-                  {order.status}
-                </span>
-              </div>
-
-              <div className="flex flex-col gap-2 mt-2">
-                <div className="flex items-center gap-2">
-                  <FaCreditCard className="text-green-600" />
-                  <span className="text-sm font-medium"> {getPaymentMethodLabel(order.paymentMethod)}</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {renderPaymentStatusWithIcon(order.paymentStatus)}
-                </div>
-
-
-                <div className="flex items-center gap-2">
-                  <FaCheckCircle className="text-blue-600" />
-                  <span className="text-sm font-medium">Tổng tiền: {order.totalAmount.toLocaleString()} VND</span>
-                </div>
-
-                {order.items?.length > 0 && (
-                  <div className="text-sm text-gray-600">
-                    Sản phẩm:{" "}
-                    <span className="font-medium">{order.items[0]?.name || "Xem chi tiết..."}</span>
-                    {order.items.length > 1 && (
-                      <span className="text-xs ml-1 text-gray-500">+{order.items.length - 1} sản phẩm khác</span>
-                    )}
+    return (
+      <div className="bg-white rounded-lg shadow-lg">
+        <h2 className="text-2xl font-bold text-orange-400 mb-6">
+          Đơn hàng của bạn
+        </h2>
+        {filteredOrders.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {filteredOrders.map((order, index) => (
+              <div
+                key={index}
+                onClick={() => handleOrderClick(order)}
+                className="border rounded-lg p-4 shadow hover:shadow-md transition cursor-pointer bg-gray-50 hover:bg-white"
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <div className="text-sm text-gray-500">
+                    Ngày đặt:{" "}
+                    <span className="font-medium">
+                      {new Date(order.createdAt).toLocaleString()}
+                    </span>
                   </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-gray-500">Không có đơn hàng nào đang chờ xử lý.</p>
-      )}
-    </div>
-  );
-};
+                  <span className="text-xs px-2 py-1 rounded-full font-semibold bg-yellow-100 text-yellow-700">
+                    {order.status}
+                  </span>
+                </div>
 
+                <div className="flex flex-col gap-2 mt-2">
+                  <div className="flex items-center gap-2">
+                    <FaCreditCard className="text-green-600" />
+                    <span className="text-sm font-medium">
+                      {" "}
+                      {getPaymentMethodLabel(order.paymentMethod)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {renderPaymentStatusWithIcon(order.paymentStatus)}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <FaCheckCircle className="text-blue-600" />
+                    <span className="text-sm font-medium">
+                      Tổng tiền: {order.totalAmount.toLocaleString()} VND
+                    </span>
+                  </div>
+
+                  {order.items?.length > 0 && (
+                    <div className="text-sm text-gray-600">
+                      Sản phẩm:{" "}
+                      <span className="font-medium">
+                        {order.items[0]?.name || "Xem chi tiết..."}
+                      </span>
+                      {order.items.length > 1 && (
+                        <span className="text-xs ml-1 text-gray-500">
+                          +{order.items.length - 1} sản phẩm khác
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-500">Không có đơn hàng nào.</p>
+        )}
+      </div>
+    );
+  };
 
   const handleBackToOrders = () => {
     setStep(1);

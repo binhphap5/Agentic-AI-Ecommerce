@@ -87,7 +87,7 @@ function CheckOut() {
           isTemporary: false,
           paymentStatus: formData.paymentMethod === "COD" ? "Unpaid" : "Paid",
           paymentMethod: formData.paymentMethod,
-          status: "Confirmed",
+          status: formData.paymentMethod === "COD" ? "Đã xác nhận" : "Đang giao hàng",
           address: formData.address,
         }),
       });

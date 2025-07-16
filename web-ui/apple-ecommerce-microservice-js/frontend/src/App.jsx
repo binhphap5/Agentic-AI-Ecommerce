@@ -25,6 +25,7 @@ import Order from "./components/admin/Order.jsx";
 import Account from "./components/admin/Account.jsx";
 import LoadingSpinner from "./components/common/LoadingSpinner";
 import PaymentSuccess from './components/cart/PaymentSuccess.jsx';
+import PaymentSuccessChat from './components/chatbox/PaymentSuccess.jsx';
 
 import ChatBox from './components/chatbox/ChatBox';
 
@@ -75,7 +76,7 @@ function App() {
                         <Route path="/cart" element={<Cart />} />
                         <Route path="/checkout" element={<CheckOut />} />
                         <Route path="/payment-success" element={<PaymentSuccess />} />
-
+                        <Route path="/payment-success-chat" element={<PaymentSuccessChat />} />
                         <Route
                             path="/"
                             element={

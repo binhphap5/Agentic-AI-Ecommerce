@@ -62,6 +62,11 @@ const MarkdownMessage = ({ text }) => (
        }}
      />
    ),
+   a: ({ node, ...props }) => (
+     <a {...props} style={{ color: '#007bff' }}>
+       {props.children}
+     </a>
+   ),
    table: ({ node, ...props }) => (
      <div style={{ overflowX: 'auto', margin: '8px 0' }}>
        <table

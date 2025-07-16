@@ -7,7 +7,6 @@ require("dotenv").config();
 
 const orderServiceURL = process.env.ORDER_SERVICE_URL;
 
-
 // Initiate ATM payment
 router.post("/:orderId", async (req, res) => {
     const { orderId } = req.params;
@@ -18,7 +17,7 @@ router.post("/:orderId", async (req, res) => {
     const rawSig =
         `accessKey=${process.env.MOMO_ACCESS_KEY}` +
         `&amount=${amount}` +
-        `&extraData=${orderId}_${userId}` + 
+        `&extraData=${orderId}_${userId}` +
         `&ipnUrl=${process.env.IPN_URL}` +
         `&orderId=${momoOrderId}` +
         `&orderInfo=Thanh toán ${orderId}` +
@@ -92,7 +91,6 @@ router.post("/callback", async (req, res) => {
         amount
     } = cb;
 
-    // Tạo lại chữ ký để kiểm tra hợp lệ
     const rawSig =
         `accessKey=${process.env.MOMO_ACCESS_KEY}` +
         `&amount=${amount}` +
@@ -118,7 +116,6 @@ router.post("/callback", async (req, res) => {
     }
 
     try {
-        // Tìm thanh toán liên quan
         const payment = await Payment.findOne({ momoOrderId, requestId });
         if (!payment) {
             return res.status(404).json({ success: false, error: "Không tìm thấy thanh toán" });
@@ -128,28 +125,25 @@ router.post("/callback", async (req, res) => {
         payment.extraCallback = cb;
         await payment.save();
 
-        // Tách orderId và userId từ extraData
-        console.log(`[MoMo Callback] extraData:`, cb.extraData);
+        console.log("[MoMo Callback] extraData:", cb.extraData);
         const extraParts = cb.extraData?.split("_") || [];
         const originalOrderId = extraParts[0];
         const userId = extraParts[1];
         console.log(`[MoMo Callback] Extracted - orderId: ${originalOrderId}, userId: ${userId}`);
 
         if (!originalOrderId || !userId) {
-            console.error(`[MoMo Callback] Missing orderId or userId in extraData`);
+            console.error("[MoMo Callback] Missing orderId or userId in extraData");
             return res.status(400).json({ success: false, error: "Thiếu orderId hoặc userId trong extraData" });
         }
 
-        // Nếu thanh toán thành công → cập nhật đơn hàng
         if (resultCode === 0) {
-            // Cập nhật trạng thái đơn hàng
             const orderRes = await fetch(`${orderServiceURL}/api/orders/${originalOrderId}/status`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    status: "Confirmed",
+                    status: "Đang giao hàng",
                     isTemporary: false,
-                    paymentStatus: "Paid Momo",
+                    paymentStatus: "Paid",
                     paymentMethod: "Momo"
                 }),
             });
@@ -160,7 +154,6 @@ router.post("/callback", async (req, res) => {
                 console.log("[MoMo Callback] Order status updated successfully");
             }
 
-            // Bỏ phần xóa cart - để frontend PaymentSuccess xử lý
             console.log("[MoMo Callback] Cart removal will be handled by frontend");
         }
 
@@ -188,6 +181,69 @@ router.get("/:paymentId", async (req, res) => {
         return res.json({ success: true, payment });
     } catch (err) {
         return res.status(500).json({ success: false, error: "Internal server error" });
+    }
+});
+
+// QR code
+router.post("/qr/:orderId", async (req, res) => {
+    const { orderId } = req.params;
+    const { amount, userId } = req.body;
+    const redirectUrl = `${process.env.REDIRECT_CHAT_URL}?orderId=${orderId}&userId=${userId}`;
+    const requestId = Date.now().toString();
+    const momoOrderId = `qr_order_${requestId}`;
+
+    const rawSignature =
+        `accessKey=${process.env.MOMO_ACCESS_KEY}` +
+        `&amount=${amount}` +
+        `&extraData=${orderId}_${userId}` +
+        `&ipnUrl=${process.env.IPN_URL}` +
+        `&orderId=${momoOrderId}` +
+        `&orderInfo=Thanh toán ${orderId}` +
+        `&partnerCode=${process.env.MOMO_PARTNER_CODE}` +
+        `&redirectUrl=${redirectUrl}` +
+        `&requestId=${requestId}` +
+        `&requestType=captureWallet`;
+
+    const signature = crypto
+        .createHmac("sha256", process.env.MOMO_SECRET_KEY)
+        .update(rawSignature)
+        .digest("hex");
+
+    const body = {
+        partnerCode: process.env.MOMO_PARTNER_CODE,
+        accessKey: process.env.MOMO_ACCESS_KEY,
+        requestId,
+        amount: amount.toString(),
+        orderId: momoOrderId,
+        orderInfo: `Thanh toán ${orderId}`,
+        redirectUrl,
+        ipnUrl: process.env.IPN_URL,
+        extraData: `${orderId}_${userId}`,
+        requestType: "captureWallet",
+        signature,
+        lang: "vi"
+    };
+
+    try {
+        const resp = await axios.post(process.env.MOMO_ENDPOINT, body, {
+            headers: { "Content-Type": "application/json" }
+        });
+
+        if (resp.data?.payUrl || resp.data?.deeplink || resp.data?.qrCodeUrl) {
+            return res.json({
+                success: true,
+                payUrl: resp.data.payUrl || null,
+                deeplink: resp.data.deeplink || null,
+                qrCodeUrl: resp.data.qrCodeUrl || null,
+            });
+        }
+
+        throw new Error(resp.data.message || "Không nhận được mã QR từ MoMo");
+    } catch (err) {
+        return res.status(500).json({
+            success: false,
+            error: err.response?.data?.message || err.message
+        });
     }
 });
 

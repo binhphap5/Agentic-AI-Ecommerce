@@ -1,7 +1,7 @@
 const express = require("express");
 const Product = require("../models/product");
 const router = express.Router();
-
+const mongoose = require("mongoose");
 // CREATE single product
 router.post("/create", async (req, res) => {
   const {
@@ -81,8 +81,23 @@ router.get("/get", async (req, res) => {
 // GET product by Mongo _id
 router.get("/:id", async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
-    if (!product) return res.status(404).json({ msg: "Product not found" });
+    const { id } = req.params;
+    let product = null;
+
+    // Nếu id là một ObjectId hợp lệ thì thử tìm theo _id
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      product = await Product.findById(id);
+    }
+
+    // Nếu không tìm thấy theo _id hoặc id không hợp lệ, thử tìm theo product_id
+    if (!product) {
+      product = await Product.findOne({ product_id: id });
+    }
+
+    if (!product) {
+      return res.status(404).json({ msg: "Product not found" });
+    }
+
     res.json(product);
   } catch (e) {
     res.status(500).json({ error: e.message });

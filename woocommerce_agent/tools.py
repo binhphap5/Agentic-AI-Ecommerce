@@ -6,12 +6,15 @@ import asyncio
 from typing import List, Dict, Any, Annotated, Optional, Literal
 from langgraph.prebuilt import InjectedState
 import requests
+import urllib.parse
 
 # Load embedding model
 embedding_model = HuggingFaceEmbeddings(
     model_name="Alibaba-NLP/gte-multilingual-base",
-    model_kwargs={'device':'cuda' if torch.cuda.is_available() else 'cpu',
-                  'trust_remote_code': True}
+    model_kwargs={
+        "device": "cuda" if torch.cuda.is_available() else "cpu",
+        "trust_remote_code": True,
+    },
 )
 
 # Load MCP tools
@@ -36,6 +39,7 @@ embedding_model = HuggingFaceEmbeddings(
 
 # tools = asyncio.run(get_mcp_tools())
 
+
 # Define tools
 def get_product_semantic_tool(query: str) -> str:
     """
@@ -50,6 +54,7 @@ def get_product_semantic_tool(query: str) -> str:
 
     return get_product_semantic(query, embedding_model=embedding_model)
 
+
 def query_supabase_tool(query: str) -> str:
     """
     Nhận một câu tiếng Việt từ người dùng và trả về kết quả truy vấn từ Supabase.
@@ -62,19 +67,24 @@ def query_supabase_tool(query: str) -> str:
     """
     return query_supabase_with_llm(query, embedding_model=embedding_model)
 
-def order_tool(product_ids: list[str], address: str, paymentMethod: Literal["COD", "Momo"],
-               userID: Annotated[Optional[str], InjectedState("userID")]) -> str:
+
+def order_tool(
+    product_ids: list[str],
+    address: str,
+    paymentMethod: Literal["COD", "Momo"],
+    userID: Annotated[Optional[str], InjectedState("userID")],
+) -> str:
     """
     Tạo và xác nhận một đơn hàng dựa trên danh sách ID sản phẩm.
     Công cụ sẽ lấy thông tin sản phẩm, tạo đơn hàng tạm, sau đó xác nhận đơn hàng đó.
 
     Tham số:
         product_ids (list[str]): Danh sách ID sản phẩm cần đặt hàng.
-    
+
     Trả về:
         str: Kết quả trả về là thông tin các sản phẩm và trạng thái đơn hàng đã xác nhận.
     """
-    
+
     if not userID:
         return "Người dùng cần đăng nhập để đặt hàng."
 
@@ -85,10 +95,10 @@ def order_tool(product_ids: list[str], address: str, paymentMethod: Literal["COD
     try:
         product_url = "http://localhost/api/products/get-by-ids"
         product_response = requests.post(product_url, json={"product_ids": product_ids})
-        
+
         if product_response.status_code != 200:
             return f"Lỗi khi lấy thông tin sản phẩm: {product_response.status_code} - {product_response.text}"
-            
+
         products = product_response.json()
         if not products:
             return "Không tìm thấy sản phẩm nào với các ID đã cho. Hãy dùng tool query_database_tool để lấy thông tin ID trước."
@@ -100,14 +110,14 @@ def order_tool(product_ids: list[str], address: str, paymentMethod: Literal["COD
     order_id = None
     total_amount = sum(p.get("price", 0) for p in products)
     try:
-        user_id = userID 
+        user_id = userID
         items = [{"productId": p.get("product_id"), "quantity": 1} for p in products]
 
         order_payload = {
             "items": items,
             "totalAmount": total_amount,
             "paymentMethod": paymentMethod,
-            "address": address
+            "address": address,
         }
 
         order_url = f"http://localhost/api/orders/{user_id}"
@@ -115,9 +125,9 @@ def order_tool(product_ids: list[str], address: str, paymentMethod: Literal["COD
 
         if order_response.status_code != 201:
             return f"Lỗi khi tạo đơn hàng tạm: {order_response.status_code} - {order_response.text}"
-        
+
         order_data = order_response.json()
-        order_id = order_data.get('_id')
+        order_id = order_data.get("_id")
 
     except requests.exceptions.RequestException as e:
         return f"Đã xảy ra lỗi khi kết nối tới dịch vụ đặt hàng: {e}"
@@ -128,13 +138,27 @@ def order_tool(product_ids: list[str], address: str, paymentMethod: Literal["COD
 
     try:
         update_url = f"http://localhost/api/orders/{order_id}/status"
-        
-        payment_status = "Paid" if paymentMethod == "Momo" else "Unpaid"
+        momo_service_url = f"http://localhost/api/payments/qr/{order_id}"
 
+        is_Momo = paymentMethod == "Momo"
+
+        if is_Momo:
+            momo_payload = {
+                "amount": order_data.get("totalAmount", 0),
+                "userID": userID,
+            }
+            momo_response = requests.post(momo_service_url, json=momo_payload)
+
+            if momo_response.status_code != 200:
+                return f"Lỗi khi thanh toán bằng Momo: {momo_response.status_code} - {momo_response.text}"
+
+            # Lấy link thanh toán Momo
+            payment_link = momo_response.json().get("payUrl", "")
+            
         update_payload = {
-            "isTemporary": False,
-            "status": "Confirm",
-            "paymentStatus": payment_status,
+            "isTemporary": True if is_Momo else False,
+            "status": "Đã xác nhận",
+            "paymentStatus": "Unpaid",
             "paymentMethod": paymentMethod,
         }
 
@@ -144,15 +168,19 @@ def order_tool(product_ids: list[str], address: str, paymentMethod: Literal["COD
             return f"Lỗi khi xác nhận đơn hàng: {update_response.status_code} - {update_response.text}"
 
         # Format thông tin trả về
-        product_info = [f"- {p.get('name', 'N/A')} - {p.get('storage', 'N/A')} GB (Giá: {p.get('price', 'N/A')} VND) (Màu sắc: {p.get('color', 'N/A')})" for p in products]
-        
+        product_info = [
+            f"- {p.get('name', 'N/A')} - {p.get('storage', 'N/A')} GB (Giá: {p.get('price', 'N/A')} VND) (Màu sắc: {p.get('color', 'N/A')})"
+            for p in products
+        ]
         response_message = (
-            "Đơn hàng của bạn:\n"
+            "Đơn hàng:\n"
             + "\n".join(product_info)
             + f"\n\nTổng cộng: {total_amount} VND."
-            + f"\nMã đơn hàng của bạn là: {order_id}."
-            + f"\nTrạng thái thanh toán: {payment_status}."
+            + f"\nMã đơn: {order_id}."
         )
+
+        if is_Momo:
+            response_message += f"\n\nBẮT BUỘC gửi link thanh toán sau cho user: {payment_link}"
         return response_message
 
     except requests.exceptions.RequestException as e:
