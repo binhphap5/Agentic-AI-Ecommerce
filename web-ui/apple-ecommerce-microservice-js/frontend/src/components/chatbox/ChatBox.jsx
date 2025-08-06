@@ -46,19 +46,34 @@ const ConfirmationModal = ({ message, onConfirm, onCancel }) => (
 );
 
 // Component to render markdown content
-const MarkdownMessage = ({ text }) => (
+const MarkdownMessage = ({ text, onImageClick }) => (
   <ReactMarkdown
     children={text}
     remarkPlugins={[remarkGfm]}
     rehypePlugins={[rehypeRaw]}
     components={{
+      h1: ({ node, ...props }) => <h1 className="markdown-h1" {...props} />,
+      h2: ({ node, ...props }) => <h2 className="markdown-h2" {...props} />,
+      h3: ({ node, ...props }) => <h3 className="markdown-h3" {...props} />,
+      h4: ({ node, ...props }) => <h4 className="markdown-h4" {...props} />,
+      h5: ({ node, ...props }) => <h5 className="markdown-h5" {...props} />,
+      h6: ({ node, ...props }) => <h6 className="markdown-h6" {...props} />,
+      ul: ({ node, ...props }) => <ul className="markdown-ul" {...props} />,
+      ol: ({ node, ...props }) => <ol className="markdown-ol" {...props} />,
+      li: ({ node, ...props }) => <li className="markdown-li" {...props} />,
+      p: ({ node, ...props }) => <p className="markdown-p" {...props} />,
+      strong: ({ node, ...props }) => <strong className="markdown-strong" {...props} />,
+      em: ({ node, ...props }) => <em className="markdown-em" {...props} />,
+      blockquote: ({ node, ...props }) => <blockquote className="markdown-blockquote" {...props} />,
       img: ({ node, ...props }) => (
         <img
           {...props}
+          onClick={() => onImageClick && onImageClick(props.src)}
           style={{
             maxWidth: '100%',
             borderRadius: 8,
-            margin: '8px 0'
+            margin: '8px 0',
+            cursor: 'pointer' // Indicate that the image is clickable
           }}
         />
       ),
@@ -93,6 +108,18 @@ const MarkdownMessage = ({ text }) => (
   />
 );
 
+// New Image Modal Component
+const ImageModal = ({ src, onClose }) => (
+  <div className="image-modal-overlay" onClick={onClose}>
+    <div className="image-modal-content" onClick={(e) => e.stopPropagation()}> {/* Prevent click from closing modal */}
+      <button className="image-modal-close-btn" onClick={onClose}>
+        <IoClose size={40} />
+      </button>
+      <img src={src} alt="Full size" className="image-modal-img" />
+    </div>
+  </div>
+);
+
 const ChatBox = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
@@ -100,12 +127,24 @@ const ChatBox = () => {
   const [showOptions, setShowOptions] = useState(true);
   const [isBotTyping, setIsBotTyping] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [currentImageSrc, setCurrentImageSrc] = useState('');
   const chatBodyRef = useRef(null);
   const createMessage = (from, text) => ({
     from,
     text,
     timestamp: new Date().toISOString(),
   });
+
+  const handleImageClick = (src) => {
+    setCurrentImageSrc(src);
+    setShowImageModal(true);
+  };
+
+  const handleCloseImageModal = () => {
+    setShowImageModal(false);
+    setCurrentImageSrc('');
+  };
 
   // Fetch history on component mount
   useEffect(() => {
@@ -226,7 +265,7 @@ const ChatBox = () => {
       console.error('Failed to fetch from agent:', error);
       setMessages((prev) => {
         const filtered = prev.filter(msg => msg.from !== 'bot-loading');
-        return [...filtered, createMessage('bot', 'Sorry, I am having trouble connecting.')];
+        return [...filtered, createMessage('bot', 'Xin lỗi, có vẻ như đang có vấn đề về kết nối.')];
       });
     }
   };
@@ -299,7 +338,7 @@ const ChatBox = () => {
                 <div className={`chat-msg ${msg.from}`}>
                   <>
                     <div className="msg-text">
-                      <MarkdownMessage text={msg.text} />
+                      <MarkdownMessage text={msg.text} onImageClick={handleImageClick} />
                     </div>
                     <div className="timestamp">{formatTime(msg.timestamp)}</div>
                   </>
@@ -362,6 +401,10 @@ const ChatBox = () => {
           </div>
 
         </div>
+      )}
+
+      {showImageModal && (
+        <ImageModal src={currentImageSrc} onClose={handleCloseImageModal} />
       )}
 
       {!isOpen && (

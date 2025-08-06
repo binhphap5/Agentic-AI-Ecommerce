@@ -14,7 +14,7 @@ import re
 
 # LangGraph and LangChain imports
 from langchain_core.messages import HumanMessage, AIMessage
-from agent_core import agent_graph
+from agent_core import agent_graph, clear_memory
 
 # Load environment variables
 load_dotenv()
@@ -78,6 +78,7 @@ async def delete_conversation_history(session_id: str):
     """Delete all conversation history for a given session_id."""
     try:
         supabase.table("chat_histories").delete().eq("session_id", session_id).execute()
+        clear_memory(memory=agent_graph.checkpointer, thread_id=session_id)  # Clear memory for this session
         return {"status": "success", "message": "History deleted"}
     except Exception as e:
         print(f"Error deleting conversation history: {e}")
@@ -130,20 +131,23 @@ async def invoke_agent_streaming(request: ChatRequest):
         full_response = ""
         
         try:
-            # Fetch conversation history
-            history = await fetch_conversation_history(request.sessionId)
-            messages = []
-            for msg in history:
-                msg_data = msg.get("message", {})
-                msg_type = msg_data.get("type")
-                msg_content = msg_data.get("content", "")
-                if msg_type == "human":
-                    messages.append(HumanMessage(content=msg_content))
-                else:
-                    messages.append(AIMessage(content=msg_content))
+            config = {"configurable": {"thread_id": request.sessionId}, "recursion_limit": 10}
+            state_snapshot = agent_graph.get_state(config)
 
-            # Add the latest user input
-            messages.append(HumanMessage(content=request.chatInput))
+            # Check if the state snapshot has messages in its values
+            if not state_snapshot.values.get("messages"):
+                history = await fetch_conversation_history(request.sessionId)
+                messages = [
+                    HumanMessage(content=msg.get("message", {}).get("content", ""))
+                    if msg.get("message", {}).get("type") == "human"
+                    else AIMessage(content=msg.get("message", {}).get("content", ""))
+                    for msg in history
+                ]
+                agent_graph.update_state(
+                    config,
+                    {"messages": messages},
+                )
+                print(f"Loaded {len(messages)} messages from history for session {request.sessionId}")
 
             # Store user's message
             await store_message(
@@ -155,9 +159,9 @@ async def invoke_agent_streaming(request: ChatRequest):
             userID = request.userID if request.userID else None
             # Use astream_events for streaming
             async for event in agent_graph.astream_events(
-                {"messages": messages,
+                {"messages": HumanMessage(content=request.chatInput),
                  "userID": userID},
-                version="v1" 
+                config=config,
             ):
                 kind = event["event"]
                 if kind == "on_chat_model_stream":
@@ -166,14 +170,7 @@ async def invoke_agent_streaming(request: ChatRequest):
                         content = chunk.content
                         if content:
                             full_response += content
-                            # SSE format: data: {"chunk": "..."}
-
-
                             yield f"data: {json.dumps({'chunk': content})}\n\n"
-                # You can handle other event types here if needed
-                # For example, to log tool calls or other agent actions
-                # elif kind == "on_tool_start":
-                #     print(f"Tool start: {event['name']} with args {event['data'].get('input')}")
 
             # After streaming is complete, store the full AI response
             await store_message(

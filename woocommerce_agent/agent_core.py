@@ -4,6 +4,8 @@ from langgraph.prebuilt.chat_agent_executor import AgentState
 from typing import TypedDict, Optional
 from utils.prompts import system_prompt
 from tools import get_product_semantic_tool, query_supabase_tool, order_tool
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from dotenv import load_dotenv
 import os
 
@@ -20,10 +22,33 @@ llm = get_langchain_model()
 class CustomAgentState(AgentState):
     userID: Optional[str]
     
+checkpointer = InMemorySaver()
+
 # Use create_react_agent for a clean agent setup
 agent_graph = create_react_agent(
     model=llm,
     tools=[get_product_semantic_tool, query_supabase_tool, order_tool],
     prompt=system_prompt,
     state_schema=CustomAgentState,
+    checkpointer=checkpointer,
+    version="v2",
 )
+def clear_memory(memory: BaseCheckpointSaver, thread_id: str) -> None:
+    """ Clear the memory for a given thread_id. """
+    try:
+        # If it's an InMemorySaver (which MemorySaver is an alias for),
+        # we can directly clear the storage and writes
+        if hasattr(memory, 'storage') and hasattr(memory, 'writes'):
+            # Clear all checkpoints for this thread_id (all namespaces)
+            memory.storage.pop(thread_id, None)
+
+            # Clear all writes for this thread_id (for all namespaces)
+            keys_to_remove = [key for key in memory.writes.keys() if key[0] == thread_id]
+            for key in keys_to_remove:
+                memory.writes.pop(key, None)
+
+            print(f"Memory cleared for thread_id: {thread_id}")
+            return
+
+    except Exception as e:
+        print(f"Error clearing InMemorySaver storage for thread_id {thread_id}: {e}")

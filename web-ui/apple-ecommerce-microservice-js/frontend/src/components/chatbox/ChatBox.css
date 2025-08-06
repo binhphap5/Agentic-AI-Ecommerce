@@ -305,4 +305,147 @@
   background-color: #e74c3c;
   color: white;
 }
-  
+
+/* Markdown Basic Styling */
+.msg-text p {
+  margin-bottom: 0.5em;
+  line-height: 1.5;
+}
+.msg-text strong {
+  font-weight: bold;
+}
+.msg-text em {
+  font-style: italic;
+}
+/* Headings */
+.msg-text .markdown-h1 {
+  font-size: 1.8em;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  font-weight: bold;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 0.3em;
+}
+.msg-text .markdown-h2 {
+  font-size: 1.5em;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  font-weight: bold;
+}
+.msg-text .markdown-h3 {
+  font-size: 1.2em;
+  margin-top: 0.8em;
+  margin-bottom: 0.4em;
+  font-weight: bold;
+}
+.msg-text .markdown-h4 {
+  font-size: 1.1em;
+  margin-top: 0.7em;
+  margin-bottom: 0.3em;
+  font-weight: bold;
+}
+.msg-text .markdown-h5 {
+  font-size: 1em;
+  margin-top: 0.6em;
+  margin-bottom: 0.2em;
+  font-weight: bold;
+}
+.msg-text .markdown-h6 {
+  font-size: 0.9em;
+  margin-top: 0.5em;
+  margin-bottom: 0.1em;
+  font-weight: bold;
+}
+/* Lists */
+.msg-text .markdown-ul,
+.msg-text .markdown-ol {
+  margin-bottom: 0.5em;
+}
+.msg-text .markdown-li {
+  margin-bottom: 0.2em;
+  line-height: 1.5;
+}
+/* Blockquote */
+.msg-text .markdown-blockquote {
+  border-left: 4px solid #ccc;
+  margin: 1em 0;
+  padding: 0.5em 1em;
+  color: #666;
+  background-color: #f9f9f9;
+}
+/* Code blocks */
+.msg-text pre {
+  background-color: #2d2d2d;
+  color: #f8f8f2;
+  padding: 1em;
+  border-radius: 5px;
+  overflow-x: auto;
+  margin-bottom: 1em;
+}
+.msg-text pre code {
+  font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  font-size: 0.9em;
+}
+/* Inline code */
+.msg-text code {
+  background-color: #e0e0e0;
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.9em;
+  }
+
+/* Image Modal Styles */
+.image-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+   justify-content: center;
+   align-items: center;
+   z-index: 1000;
+ }
+
+.image-modal-content {
+  position: relative;
+  width: 95vw;   /* Chiếm 95% chiều rộng của viewport */
+  height: 95vh;  /* Chiếm 95% chiều cao của viewport */
+  background-color: transparent;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden; /* Đảm bảo không có gì tràn ra khỏi khung này */
+}
+
+.image-modal-img {
+  display: block; /* Đảm bảo ảnh là block element */
+  max-width: 100%; /* Giới hạn chiều rộng tối đa bằng 100% của container */
+  max-height: 100%; /* Giới hạn chiều cao tối đa bằng 100% của container */
+  width: auto; /* Cho phép chiều rộng tự động để duy trì tỷ lệ */
+  height: auto; /* Cho phép chiều cao tự động để duy trì tỷ lệ */
+  object-fit: contain; /* Đảm bảo ảnh co giãn để vừa với container mà không bị cắt */
+  border-radius: 8px;
+}
+
+ .image-modal-close-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background-color: rgba(250, 2, 2, 0.5);
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 24px;
+  z-index: 1001;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.image-modal-close-btn:hover {
+  background-color: rgba(250, 2, 2, 0.919);
+}
+

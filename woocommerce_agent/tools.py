@@ -7,6 +7,7 @@ from typing import List, Dict, Any, Annotated, Optional, Literal
 from langgraph.prebuilt import InjectedState
 import requests
 import urllib.parse
+from sentence_transformers import CrossEncoder
 
 # Load embedding model
 embedding_model = HuggingFaceEmbeddings(
@@ -16,6 +17,11 @@ embedding_model = HuggingFaceEmbeddings(
         "trust_remote_code": True,
     },
 )
+
+# Load reranking model
+reranker_model = CrossEncoder("Alibaba-NLP/gte-multilingual-reranker-base",
+                              trust_remote_code=True,
+                              device="cuda" if torch.cuda.is_available() else "cpu")
 
 # Load MCP tools
 
@@ -39,7 +45,6 @@ embedding_model = HuggingFaceEmbeddings(
 
 # tools = asyncio.run(get_mcp_tools())
 
-
 # Define tools
 def get_product_semantic_tool(query: str) -> str:
     """
@@ -52,7 +57,7 @@ def get_product_semantic_tool(query: str) -> str:
         str: Kết quả trả về là thông tin các sản phẩm dựa trên câu hỏi.
     """
 
-    return get_product_semantic(query, embedding_model=embedding_model)
+    return get_product_semantic(query, embedding_model=embedding_model, reranker_model=reranker_model)
 
 
 def query_supabase_tool(query: str) -> str:
@@ -65,7 +70,7 @@ def query_supabase_tool(query: str) -> str:
     Trả về:
         str: Kết quả trả về là thông tin các sản phẩm dựa trên câu hỏi.
     """
-    return query_supabase_with_llm(query, embedding_model=embedding_model)
+    return query_supabase_with_llm(query, embedding_model=embedding_model, reranker_model=reranker_model)
 
 
 def order_tool(
@@ -75,10 +80,10 @@ def order_tool(
     userID: Annotated[Optional[str], InjectedState("userID")],
 ) -> str:
     """
-    Tạo và xác nhận một đơn hàng dựa trên danh sách ID sản phẩm.
+    Tạo và xác nhận một đơn hàng dựa trên danh sách ID các sản phẩm.
 
     Tham số:
-        product_ids (list[str]): Danh sách ID sản phẩm cần đặt hàng.
+        product_ids (list[str]): Danh sách ID các sản phẩm cần đặt hàng (có thể trùng nếu số lượng lớn).
         address (str): Địa chỉ giao hàng của người dùng.
         paymentMethod (Literal["COD", "Momo"]): Phương thức thanh toán,
 
@@ -91,11 +96,19 @@ def order_tool(
 
     if not product_ids:
         return "Vui lòng cung cấp danh sách ID sản phẩm."
+    
+    # Xử lý danh sách ID sản phẩm để tính toán quantity
+    product_count = {}
+    for pid in product_ids:
+        if pid in product_count:
+            product_count[pid] += 1
+        else:
+            product_count[pid] = 1
 
     # --- Bước 1: Lấy thông tin sản phẩm ---
     try:
         product_url = "http://localhost/api/products/get-by-ids"
-        product_response = requests.post(product_url, json={"product_ids": product_ids})
+        product_response = requests.post(product_url, json={"product_ids": list(product_count.keys())})
 
         if product_response.status_code != 200:
             return f"Lỗi khi lấy thông tin sản phẩm: {product_response.status_code} - {product_response.text}"
@@ -109,10 +122,18 @@ def order_tool(
 
     # --- Bước 2: Tạo đơn hàng tạm thời ---
     order_id = None
-    total_amount = sum(p.get("price", 0) for p in products)
+    total_amount = sum(p.get("price", 0) * product_count.get(p.get("product_id"), 0) for p in products)
+    
+    if paymentMethod == "Momo" and total_amount > 50000000:
+        return (
+            "Yêu cầu bị từ chối. " 
+            "Số tiền tối đa cho phép là 50000000 VND. "
+            f"Đơn của bạn có giá trị lên tới {total_amount} VND."
+        )
+    
     try:
         user_id = userID
-        items = [{"productId": p.get("product_id"), "quantity": 1} for p in products]
+        items = [{"productId": p.get("product_id"), "quantity": product_count.get(p.get("product_id"), 1)} for p in products]
 
         order_payload = {
             "items": items,
@@ -170,7 +191,7 @@ def order_tool(
 
         # Format thông tin trả về
         product_info = [
-            f"- {p.get('name', 'N/A')} - {p.get('storage', 'N/A')} GB (Giá: {p.get('price', 'N/A')} VNĐ) (Màu sắc: {p.get('color', 'N/A')})"
+            f"- {p.get('name', 'N/A')} - {p.get('storage', 'N/A')} GB (Giá: {p.get('price', 'N/A')} VNĐ) (Màu sắc: {p.get('color', 'N/A')}) - Số lượng: {product_count.get(p.get('product_id'), 1)}"
             for p in products
         ]
         response_message = (

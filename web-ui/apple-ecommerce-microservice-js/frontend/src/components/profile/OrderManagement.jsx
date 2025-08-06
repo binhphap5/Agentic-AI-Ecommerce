@@ -110,7 +110,7 @@ const OrderManagement = () => {
     }
   };
 
-  // New function for delivery progress bar
+  //progress bar
   const renderDeliveryProgressBar = (currentStatus) => {
     const statuses = [
       {
@@ -184,6 +184,33 @@ const OrderManagement = () => {
     );
   };
 
+  //cancel order button logic
+  const handleCancelOrder = async (orderId) => {
+    if (!window.confirm("Bạn có chắc muốn hủy đơn hàng này?")) return;
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/orders/${orderId}/cancel`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      console.log(response)
+      if (!response.ok) throw new Error("Hủy đơn hàng thất bại");
+
+      // Cập nhật lại danh sách đơn hàng sau khi hủy
+      setOrders((prevOrders) =>
+        prevOrders.map((order) =>
+          order._id === orderId ? { ...order, status: "Canceled" } : order
+        )
+      );
+      alert("Đã hủy đơn hàng thành công!");
+    } catch (error) {
+      console.error("Lỗi khi hủy đơn hàng:"+ error);
+      alert("Có lỗi xảy ra khi hủy đơn hàng.");
+    }
+  };
+
   const renderOrderDetails = () => {
     if (!selectedOrder) return null;
 
@@ -198,6 +225,8 @@ const OrderManagement = () => {
       _id,
       address,
     } = selectedOrder;
+
+    const userPhone = user.phone || "Chưa cập nhật";
 
     return (
       <div className="flex-grow lg:ml-8 bg-white p-6 rounded-lg shadow-lg">
@@ -237,6 +266,9 @@ const OrderManagement = () => {
             </p>
             <p>
               <strong>Địa chỉ giao hàng:</strong> {address}
+            </p>
+            <p>
+              <strong>SĐT liên lạc:</strong> {userPhone}
             </p>
           </div>
         </div>
@@ -327,6 +359,19 @@ const OrderManagement = () => {
                           +{order.items.length - 1} sản phẩm khác
                         </span>
                       )}
+                    </div>
+                  )}
+                  {order.status !== "Đang giao hàng" && order.status !== "Đã nhận" && (
+                    <div className="flex justify-end">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation(); // Ngăn click vào thẻ cha
+                          handleCancelOrder(order._id);
+                        }}
+                        className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+                      >
+                        Hủy đơn
+                      </button>
                     </div>
                   )}
                 </div>

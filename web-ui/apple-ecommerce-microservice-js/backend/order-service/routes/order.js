@@ -74,4 +74,22 @@ router.put("/:orderId/status", async (req, res) => {
     }
 });
 
+//Hủy đơn hàng
+router.put('/:id/cancel', async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    if (order.status === "Đang giao hàng" || order.status === "Đã nhận") {
+      return res.status(400).json({ message: "Cannot cancel this order." });
+    }
+
+    await order.deleteOne(); // hoặc Order.findByIdAndDelete(req.params.id);
+
+    res.json({ message: "Order deleted (canceled) successfully." });
+  } catch (err) {
+    res.status(500).json({ message: "Error deleting (canceling) order" });
+  }
+});
+
 module.exports = router;

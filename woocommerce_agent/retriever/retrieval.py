@@ -16,6 +16,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import Runnable
 from langchain_huggingface import HuggingFaceEmbeddings
+from sentence_transformers import CrossEncoder
 
 import torch
 
@@ -69,11 +70,11 @@ def get_vector_retriever(embedding_model):
     )
     return vs.as_retriever(
         search_type="similarity_score_threshold",
-        search_kwargs={"k": 3, "score_threshold": 0.7},
+        search_kwargs={"k": 5, "score_threshold": 0.55},
     )
 
 
-def get_product_semantic(query: str, embedding_model=None) -> str:
+def get_product_semantic(query: str, embedding_model=None, reranker_model=None) -> str:
     if embedding_model is None:
         embedding_model = HuggingFaceEmbeddings(
             model_name="Alibaba-NLP/gte-multilingual-base",
@@ -82,19 +83,51 @@ def get_product_semantic(query: str, embedding_model=None) -> str:
                 "trust_remote_code": True,
             },
         )
-
+    if reranker_model is None:
+        reranker_model = CrossEncoder("Alibaba-NLP/gte-multilingual-reranker-base",
+                                      trust_remote_code=True,
+                                      device="cuda" if torch.cuda.is_available() else "cpu")
+        
     retriever = get_vector_retriever(embedding_model)
     docs_res = retriever.invoke(query)
+    
+    if docs_res:
+        # Prepare texts for reranking using doc.page_content
+        product_contents = [doc.page_content for doc in docs_res]
 
-    products = [doc.metadata for doc in docs_res]
-    products = _deduplicate_by_name(products)
-    summary = f"Tìm thấy {len(products)} sản phẩm có liên quan."
+        # Create pairs of (query, product_content) for reranking
+        sentence_pairs = [[query, content] for content in product_contents]
 
-    return json.dumps({"products": products, "summary": summary})
+        # Predict scores
+        rerank_scores = reranker_model.predict(sentence_pairs)
+
+        print("\nReranking Scores (Product Name - Color - Score):")
+        for i, score in enumerate(rerank_scores):
+            product_name = docs_res[i].metadata.get("name", "N/A")
+            product_color = docs_res[i].metadata.get("color", "N/A")
+            print(f"- {product_name} - {product_color}: {score:.4f}")
+        print("\n")
+
+        # Sắp xếp các sản phẩm dựa trên điểm số và in ra thông tin
+        scored_docs = sorted(zip(docs_res, rerank_scores), key=lambda x: x[1], reverse=True)
+        
+        # Trích xuất và in thông tin metadata của top 3 sản phẩm
+        top_products = []
+        print("===> Top 3 Products:")
+        for doc, score in scored_docs[:3]:
+            metadata = doc.metadata
+            top_products.append(metadata)
+            print(f"- {metadata.get('name', 'N/A')} - {metadata.get('color', 'N/A')}: {score:.4f}")
+    else:
+        top_products = []
+
+    top_products = _deduplicate_by_name(top_products)
+    summary = f"Tìm thấy {len(top_products)} sản phẩm dựa trên truy vấn của bạn."
+    return json.dumps({"products": top_products, "summary": summary})
 
 
 # ==== QUERY SUPABASE TOOL ====
-def query_supabase_with_llm(user_query: str, embedding_model=None) -> str:
+def query_supabase_with_llm(user_query: str, embedding_model=None, reranker_model=None) -> str:
     try:
         sql_output = sql_chain.invoke({"user_query": user_query})
         raw_sql = sql_output.content.strip()
@@ -119,7 +152,7 @@ def query_supabase_with_llm(user_query: str, embedding_model=None) -> str:
                 all_results.extend(data)
 
         if not all_results:
-            return get_product_semantic(user_query, embedding_model)
+            return get_product_semantic(user_query, embedding_model, reranker_model)
 
         all_results = _deduplicate_by_name(all_results)
         summary = f"Tìm thấy {len(all_results)} sản phẩm dựa trên truy vấn của bạn."
