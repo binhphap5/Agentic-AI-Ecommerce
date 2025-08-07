@@ -92,7 +92,7 @@ def load_to_supabase(excel_path: str):
         supabase_key=os.getenv("SUPABASE_SERVICE_KEY")
     )
 
-    # Khởi tạo embedding model (tối ưu cho tiếng Việt)
+    # Khởi tạo embedding model 
     embed = HuggingFaceEmbeddings(
         model_name="Alibaba-NLP/gte-multilingual-base",
         model_kwargs={'device':'cuda', 'trust_remote_code': True}

@@ -3,47 +3,90 @@ from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
 import os
 import requests
-from requests.auth import HTTPBasicAuth
-import re
-import unicodedata
-from urllib.parse import unquote 
 from tavily import TavilyClient
-from typing import List, Dict, Any, Annotated, Optional, Literal
+from typing import Optional, Literal
+from langchain_huggingface import HuggingFaceEmbeddings
+import torch
+from sentence_transformers import CrossEncoder
+from retriever.retrieval import query_supabase_with_llm, get_product_semantic
 
 load_dotenv()
 
+# Load embedding model
+embedding_model = HuggingFaceEmbeddings(
+    model_name="Alibaba-NLP/gte-multilingual-base",
+    model_kwargs={
+        "device": "cuda" if torch.cuda.is_available() else "cpu",
+        "trust_remote_code": True,
+    },
+)
+
+# Load reranking model
+reranker_model = CrossEncoder("Alibaba-NLP/gte-multilingual-reranker-base",
+                              trust_remote_code=True,
+                              device="cuda" if torch.cuda.is_available() else "cpu")
+
 # Create an MCP server
-mcp = FastMCP("Muse", port=8001)
+mcp = FastMCP("LKN Privé", port=8001)
 
 # Tool implementation
+
+# @mcp.tool()
+# async def tavily_web_search(query: str) -> str:
+#     """
+#     Perform a web search.
+
+#     Args:
+#         query (str): The search query string.
+
+#     Returns:
+#         str: The search result from Tavily API. If the API key is not set, 
+#         returns an error message prompting to set TAVILY_API_KEY.
+#     """
+
+#     api_key = os.getenv("TAVILY_API_KEY")
+
+#     if not api_key:
+#         return "Tavily API key not set. Please set TAVILY_API_KEY in your environment."
+#     client = TavilyClient(api_key=api_key)
+
+#     response = client.search(query, limit=2, search_depth="advanced", include_answer=True)
+
+#     return response
+
 @mcp.tool()
-async def tavily_web_search(query: str) -> str:
+def get_product_semantic_tool(query: str) -> str:
     """
-    Perform a web search.
+    Trả về chuỗi thông tin ngữ nghĩa của các sản phẩm dựa trên một truy vấn.
 
-    Args:
-        query (str): The search query string.
+    Tham số:
+        query (str): Câu hỏi tiếng Việt từ người dùng đã được chuẩn hóa cho truy vấn.
 
-    Returns:
-        str: The search result from Tavily API. If the API key is not set, 
-        returns an error message prompting to set TAVILY_API_KEY.
+    Trả về:
+        str: Kết quả trả về là thông tin các sản phẩm dựa trên câu hỏi.
     """
 
-    api_key = os.getenv("TAVILY_API_KEY")
+    return get_product_semantic(query, embedding_model=embedding_model, reranker_model=reranker_model)
 
-    if not api_key:
-        return "Tavily API key not set. Please set TAVILY_API_KEY in your environment."
-    client = TavilyClient(api_key=api_key)
+@mcp.tool()
+def query_supabase_tool(query: str) -> str:
+    """
+    Nhận một câu tiếng Việt từ người dùng và trả về kết quả truy vấn từ Supabase.
 
-    response = client.search(query, limit=2, search_depth="advanced", include_answer=True)
+    Tham số:
+        query (str): Câu hỏi tiếng Việt từ người dùng đã được chuẩn hóa cho truy vấn.
 
-    return response
+    Trả về:
+        str: Kết quả trả về là thông tin các sản phẩm dựa trên câu hỏi.
+    """
+    return query_supabase_with_llm(query, embedding_model=embedding_model, reranker_model=reranker_model)
 
 @mcp.tool()
 def order_tool(
     product_ids: list[str],
     address: str,
     paymentMethod: Literal["COD", "Momo"],
+    userID: Optional[str] = None
 ) -> str:
     """
     Tạo và xác nhận một đơn hàng dựa trên danh sách ID các sản phẩm.
@@ -56,8 +99,7 @@ def order_tool(
     Trả về:
         str: Kết quả trả về là thông tin các sản phẩm và trạng thái của đơn hàng.
     """
-    userID = "FETCH FROM WEB UI"
-    
+
     if not userID:
         return "Người dùng cần đăng nhập để đặt hàng."
 
@@ -74,7 +116,7 @@ def order_tool(
 
     # --- Bước 1: Lấy thông tin sản phẩm ---
     try:
-        product_url = "http://localhost/api/products/get-by-ids"
+        product_url = os.getenv("PRODUCT_SERVICE_URL") + "/get-by-ids"
         product_response = requests.post(product_url, json={"product_ids": list(product_count.keys())})
 
         if product_response.status_code != 200:
@@ -109,7 +151,8 @@ def order_tool(
             "address": address,
         }
 
-        order_url = f"http://localhost/api/orders/{user_id}"
+        order_url = os.getenv("ORDER_SERVICE_URL")
+        order_url = f"{order_url}/{user_id}"
         order_response = requests.post(order_url, json=order_payload)
 
         if order_response.status_code != 201:
@@ -126,8 +169,8 @@ def order_tool(
         return "Không thể xác nhận đơn hàng vì không lấy được ID đơn hàng tạm."
 
     try:
-        update_url = f"http://localhost/api/orders/{order_id}/status"
-        momo_service_url = f"http://localhost/api/payments/qr/{order_id}"
+        update_url = os.getenv("ORDER_SERVICE_URL") + f"/{order_id}/status"
+        momo_service_url = os.getenv("PAYMENT_SERVICE_URL") + f"/qr/{order_id}"
 
         is_Momo = paymentMethod == "Momo"
 
@@ -176,6 +219,7 @@ def order_tool(
 
     except requests.exceptions.RequestException as e:
         return f"Đã xảy ra lỗi khi kết nối tới dịch vụ đặt hàng để cập nhật: {e}"
+
     
 # Run the server
 if __name__ == "__main__":

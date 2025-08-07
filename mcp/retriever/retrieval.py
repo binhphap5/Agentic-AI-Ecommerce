@@ -29,8 +29,8 @@ sql_prompt = PromptTemplate.from_template(sql_gen_prompt)
 
 
 def get_langchain_model():
-    llm = "gpt-4.1-nano"
-    base_url = "https://api.openai.com/v1"
+    llm = os.getenv("LLM_CHOICE", "gpt-4.1-nano")
+    base_url = os.getenv("LLM_BASE_URL")
     api_key = os.getenv("OPENAI_API_KEY")
     return ChatOpenAI(
         model=llm, base_url=base_url, api_key=api_key, disable_streaming=True

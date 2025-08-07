@@ -1,0 +1,11 @@
+python-dotenv
+requests
+torch
+sentence-transformers
+langchain-community
+langchain-openai
+langchain-core
+langchain-huggingface
+supabase
+pandas
+numpy
