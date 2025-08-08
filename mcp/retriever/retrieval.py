@@ -17,7 +17,7 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import Runnable
 from langchain_huggingface import HuggingFaceEmbeddings
 from sentence_transformers import CrossEncoder
-
+from typing import Optional
 import torch
 
 from prompts import sql_gen_prompt
@@ -29,11 +29,15 @@ sql_prompt = PromptTemplate.from_template(sql_gen_prompt)
 
 
 def get_langchain_model():
-    llm = os.getenv("LLM_CHOICE", "gpt-4.1-nano")
+    llm = os.getenv("LLM_CHOICE", "gpt-5-nano")
     base_url = os.getenv("LLM_BASE_URL")
     api_key = os.getenv("OPENAI_API_KEY")
     return ChatOpenAI(
-        model=llm, base_url=base_url, api_key=api_key, disable_streaming=True
+        model=llm,
+        base_url=base_url,
+        api_key=api_key,
+        disable_streaming=True,
+        extra_body={"reasoning_effort": "low", "verbosity": "low"}
     )
 
 
@@ -61,7 +65,7 @@ def _deduplicate_by_name(products: list[dict]) -> list[dict]:
 
 
 # ==== SEMANTIC TOOL ====
-def get_vector_retriever(embedding_model):
+def get_vector_retriever(embedding_model, top_k):
     vs = SupabaseVectorStore(
         client=client,
         embedding=embedding_model,
@@ -70,11 +74,13 @@ def get_vector_retriever(embedding_model):
     )
     return vs.as_retriever(
         search_type="similarity_score_threshold",
-        search_kwargs={"k": 5, "score_threshold": 0.55},
+        search_kwargs={"k": top_k, "score_threshold": 0.5},
     )
 
 
-def get_product_semantic(query: str, embedding_model=None, reranker_model=None) -> str:
+def get_product_semantic_with_reranker(query: str, embedding_model=None, reranker_model=None,
+                                       is_log: Optional[bool] = True,
+                                       is_test: Optional[bool] = False) -> str:
     if embedding_model is None:
         embedding_model = HuggingFaceEmbeddings(
             model_name="Alibaba-NLP/gte-multilingual-base",
@@ -88,7 +94,7 @@ def get_product_semantic(query: str, embedding_model=None, reranker_model=None) 
                                       trust_remote_code=True,
                                       device="cuda" if torch.cuda.is_available() else "cpu")
         
-    retriever = get_vector_retriever(embedding_model)
+    retriever = get_vector_retriever(embedding_model, top_k=10)
     docs_res = retriever.invoke(query)
     
     if docs_res:
@@ -101,29 +107,53 @@ def get_product_semantic(query: str, embedding_model=None, reranker_model=None) 
         # Predict scores
         rerank_scores = reranker_model.predict(sentence_pairs)
 
-        print("\nReranking Scores (Product Name - Color - Score):")
-        for i, score in enumerate(rerank_scores):
-            product_name = docs_res[i].metadata.get("name", "N/A")
-            product_color = docs_res[i].metadata.get("color", "N/A")
-            print(f"- {product_name} - {product_color}: {score:.4f}")
-        print("\n")
+        if is_log:
+            print("\nReranking Scores (Product Name - Color - Score):")
+            for i, score in enumerate(rerank_scores):
+                product_name = docs_res[i].metadata.get("name", "N/A")
+                product_color = docs_res[i].metadata.get("color", "N/A")
+                print(f"- {product_name} - {product_color}: {score:.4f}")
+            print("\n")
 
         # Sắp xếp các sản phẩm dựa trên điểm số và in ra thông tin
         scored_docs = sorted(zip(docs_res, rerank_scores), key=lambda x: x[1], reverse=True)
         
-        # Trích xuất và in thông tin metadata của top 3 sản phẩm
+        # Trích xuất và in thông tin metadata của top 5 sản phẩm
         top_products = []
-        print("===> Top 3 Products:")
-        for doc, score in scored_docs[:3]:
+        if is_log:
+            print("===> Top 5 Products:")
+        for doc, score in scored_docs[:5]:
             metadata = doc.metadata
             top_products.append(metadata)
-            print(f"- {metadata.get('name', 'N/A')} - {metadata.get('color', 'N/A')}: {score:.4f}")
+            if is_log:
+                print(f"- {metadata.get('name', 'N/A')} - {metadata.get('color', 'N/A')}: {score:.4f}")
     else:
         top_products = []
-
-    top_products = _deduplicate_by_name(top_products)
+        
+    if not is_test:
+        top_products = _deduplicate_by_name(top_products)
     summary = f"Tìm thấy {len(top_products)} sản phẩm dựa trên truy vấn của bạn."
     return json.dumps({"products": top_products, "summary": summary})
+
+def get_product_semantic_retriever_only(query: str, embedding_model=None, is_test: Optional[bool] = False) -> str:
+    if embedding_model is None:
+        embedding_model = HuggingFaceEmbeddings(
+            model_name="Alibaba-NLP/gte-multilingual-base",
+            model_kwargs={
+                "device": "cuda" if torch.cuda.is_available() else "cpu",
+                "trust_remote_code": True,
+            },
+        )
+     
+    retriever = get_vector_retriever(embedding_model, top_k=5)
+    docs_res = retriever.invoke(query)
+    products = [doc.metadata for doc in docs_res]
+    
+    if not is_test:
+        products = _deduplicate_by_name(products)
+        
+    summary = f"Tìm thấy {len(products)} sản phẩm dựa trên truy vấn của bạn."
+    return json.dumps({"products": products, "summary": summary})
 
 
 # ==== QUERY SUPABASE TOOL ====
@@ -152,7 +182,7 @@ def query_supabase_with_llm(user_query: str, embedding_model=None, reranker_mode
                 all_results.extend(data)
 
         if not all_results:
-            return get_product_semantic(user_query, embedding_model, reranker_model)
+            return get_product_semantic_with_reranker(user_query, embedding_model, reranker_model)
 
         all_results = _deduplicate_by_name(all_results)
         summary = f"Tìm thấy {len(all_results)} sản phẩm dựa trên truy vấn của bạn."

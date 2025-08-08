@@ -60,7 +60,7 @@ def generate_product_content(row: pd.Series) -> str:
 
 def load_to_supabase(excel_path: str):
     # Đọc và tiền xử lý dữ liệu
-    df = pd.read_excel(excel_path)
+    df = pd.read_csv(excel_path)
     df = preprocess_data(df)
     
     docs = []
@@ -111,5 +111,5 @@ def load_to_supabase(excel_path: str):
     print(f"[NOTE] Kích thước vector: {len(embed.embed_query('test'))} chiều")
 
 if __name__ == "__main__":
-    load_to_supabase("meta_data_phone.xlsx")
+    load_to_supabase("meta_data_phone.csv")
 

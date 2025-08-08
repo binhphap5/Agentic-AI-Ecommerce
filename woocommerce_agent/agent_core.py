@@ -14,11 +14,14 @@ from langchain_core.runnables import RunnableConfig
 load_dotenv()
 # Get model configuration for LangChain
 def get_langchain_model():
-    llm = os.getenv('LLM_CHOICE', 'gpt-4.1-mini')
+    llm = os.getenv('LLM_CHOICE', 'gpt-4o-mini')
     base_url = os.getenv('LLM_BASE_URL', 'http://localhost:11434/v1')
     api_key = os.getenv('LLM_API_KEY', 'ollama')
     # Enable streaming for the model
-    return ChatOpenAI(model=llm, base_url=base_url, api_key=api_key, streaming=True)
+    return ChatOpenAI(model=llm,
+                      base_url=base_url,
+                      api_key=api_key,
+                      streaming=True)
 
 llm = get_langchain_model()
 

@@ -8,7 +8,7 @@ from typing import Optional, Literal
 from langchain_huggingface import HuggingFaceEmbeddings
 import torch
 from sentence_transformers import CrossEncoder
-from retriever.retrieval import query_supabase_with_llm, get_product_semantic
+from retriever.retrieval import query_supabase_with_llm, get_product_semantic_with_reranker
 
 load_dotenv()
 
@@ -57,24 +57,24 @@ mcp = FastMCP("LKN Privé", port=8001)
 @mcp.tool()
 def get_product_semantic_tool(query: str) -> str:
     """
-    Trả về chuỗi thông tin ngữ nghĩa của các sản phẩm dựa trên một truy vấn.
+    Sử dụng khi cần truy vấn thông tin về mặt ngữ nghĩa.
 
     Tham số:
-        query (str): Câu hỏi tiếng Việt từ người dùng đã được chuẩn hóa cho truy vấn.
+        query (str): Câu hỏi tiếng Việt từ người dùng đã được chuẩn hóa cho truy vấn ngữ nghĩa.
 
     Trả về:
         str: Kết quả trả về là thông tin các sản phẩm dựa trên câu hỏi.
     """
 
-    return get_product_semantic(query, embedding_model=embedding_model, reranker_model=reranker_model)
+    return get_product_semantic_with_reranker(query, embedding_model=embedding_model, reranker_model=reranker_model)
 
 @mcp.tool()
 def query_supabase_tool(query: str) -> str:
     """
-    Nhận một câu tiếng Việt từ người dùng và trả về kết quả truy vấn từ Supabase.
+    Sử dụng khi cần truy vấn thông tin chính xác từ cơ sở dữ liệu.
 
     Tham số:
-        query (str): Câu hỏi tiếng Việt từ người dùng đã được chuẩn hóa cho truy vấn.
+        query (str): Câu hỏi tiếng Việt từ người dùng đã được chuẩn hóa cho truy vấn SQL.
 
     Trả về:
         str: Kết quả trả về là thông tin các sản phẩm dựa trên câu hỏi.
@@ -92,7 +92,7 @@ def order_tool(
     Tạo và xác nhận một đơn hàng dựa trên danh sách ID các sản phẩm.
 
     Tham số:
-        product_ids (list[str]): Danh sách ID các sản phẩm cần đặt hàng (có thể trùng nếu số lượng lớn).
+        product_ids (list[str]): Danh sách ID các sản phẩm (có thể trùng nếu số lượng lớn hơn 1).
         address (str): Địa chỉ giao hàng của người dùng.
         paymentMethod (Literal["COD", "Momo"]): Phương thức thanh toán,
 
