@@ -6,7 +6,7 @@ PRODUCTS TABLE STRUCTURE:
 - name: text (e.g., 'iPhone 12', 'iPad Air (M3) 11 inch Wi-Fi', 'MacBook Pro M4 Pro 16 inch 2025', ...)
 - product_id: text
 - type: text (only 3 types: MacBook, iPhone, iPad)
-- color: text (color)
+- color: text (color) (trắng, đen, xanh,...)
 - image: text (URL)
 - price: float (VND)
 - stock: text (instock, onbackorder)

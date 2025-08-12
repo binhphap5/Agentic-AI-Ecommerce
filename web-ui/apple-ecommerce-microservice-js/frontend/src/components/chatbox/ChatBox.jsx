@@ -10,7 +10,7 @@ import './ChatBox.css';
 const defaultOptions = [
   'Bạn là ai ?',
   'Tìm sản phẩm dưới 10 triệu',
-  'Giá của iPad Air (M3) 11 inch Wi-Fi',
+  'Giá của iPhone 12 màu trắng',
   'Tư vấn MacBook chuyên đồ họa',
 ];
 
