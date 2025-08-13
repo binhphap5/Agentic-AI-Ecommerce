@@ -6,7 +6,7 @@ PRODUCTS TABLE STRUCTURE:
 - name: text (e.g., 'iPhone 12', 'iPad Air (M3) 11 inch Wi-Fi', 'MacBook Pro M4 Pro 16 inch 2025', ...)
 - product_id: text
 - type: text (only 3 types: MacBook, iPhone, iPad)
-- color: text (color) (trắng, đen, xanh,...)
+- color: text (color) (Trắng, Đen, Xanh,...)
 - image: text (URL)
 - price: float (VND)
 - stock: text (instock, onbackorder)
@@ -19,6 +19,7 @@ REQUIREMENTS:
 - Only generate SQL queries. DO NOT include explanations or comments.
 - Always select the most useful fields for product consultation.
 - The `product_id`, `image`, `storage`, `price`, `color` field must be selected.
+- When select a text field, always use 'ILIKE'.
 - Only generate valid SQL queries that directly correspond to the following user request:
 "{user_query}"
 """

@@ -26,7 +26,7 @@ import torch
 # --- Constants ---
 DATA_DIR = Path(__file__).parent / "test_data_llm"
 EMBEDDING_MODEL_NAME = "Alibaba-NLP/gte-multilingual-base"
-RERANKER_MODEL_NAME = "Alibaba-NLP/gte-multilingual-reranker-base"
+RERANKER_MODEL_NAME = "BAAI/bge-reranker-v2-m3"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 def plot_benchmark_results(results: dict, output_path: str):

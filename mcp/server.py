@@ -22,7 +22,7 @@ embedding_model = HuggingFaceEmbeddings(
 )
 
 # Load reranking model
-reranker_model = CrossEncoder("Alibaba-NLP/gte-multilingual-reranker-base",
+reranker_model = CrossEncoder("BAAI/bge-reranker-v2-m3",
                               trust_remote_code=True,
                               device="cuda" if torch.cuda.is_available() else "cpu")
 
